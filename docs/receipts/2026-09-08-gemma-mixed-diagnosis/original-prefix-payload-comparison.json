@@ -1,0 +1,16 @@
+[
+  {
+    "rank": 0,
+    "old_entry": "5d088372aee442a4612cef791d193af485f9f57c70180a29e7a924f3d7ca99f1",
+    "reproduced_entry": "7b14bc0ebd9eb4847698c51080c2dc9107275584e311bb19ac9e2a72a963a035",
+    "object_count": 12,
+    "all_objects_identical": true
+  },
+  {
+    "rank": 1,
+    "old_entry": "5d088372aee442a4612cef791d193af485f9f57c70180a29e7a924f3d7ca99f1",
+    "reproduced_entry": "7b14bc0ebd9eb4847698c51080c2dc9107275584e311bb19ac9e2a72a963a035",
+    "object_count": 3,
+    "all_objects_identical": true
+  }
+]

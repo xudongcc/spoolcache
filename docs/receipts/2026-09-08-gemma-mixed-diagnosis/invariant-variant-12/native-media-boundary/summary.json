@@ -1,0 +1,72 @@
+{
+  "native1": {
+    "case": "native1",
+    "cached_tokens": 2560,
+    "prompt_tokens": 4149,
+    "output": {
+      "content": "OTHER",
+      "reasoning": null,
+      "reasoning_content": null,
+      "tool_calls": null,
+      "finish_reason": "stop"
+    },
+    "request_id": "chatcmpl-b7b0d6b85df6de72",
+    "output_sha256": "fc772557add6c44585aaf18d8b41d4a294f1c14471989ce7d62bd58f736a1c2b"
+  },
+  "native2": {
+    "case": "native2",
+    "cached_tokens": 2560,
+    "prompt_tokens": 4149,
+    "output": {
+      "content": "OTHER",
+      "reasoning": null,
+      "reasoning_content": null,
+      "tool_calls": null,
+      "finish_reason": "stop"
+    },
+    "request_id": "chatcmpl-bf9d8ad0bc9b8040",
+    "output_sha256": "fc772557add6c44585aaf18d8b41d4a294f1c14471989ce7d62bd58f736a1c2b"
+  },
+  "native3": {
+    "case": "native3",
+    "cached_tokens": 2560,
+    "prompt_tokens": 4149,
+    "output": {
+      "content": "OTHER",
+      "reasoning": null,
+      "reasoning_content": null,
+      "tool_calls": null,
+      "finish_reason": "stop"
+    },
+    "request_id": "chatcmpl-a1df245c15933606",
+    "output_sha256": "fc772557add6c44585aaf18d8b41d4a294f1c14471989ce7d62bd58f736a1c2b"
+  },
+  "cold": {
+    "case": "cold",
+    "cached_tokens": 0,
+    "prompt_tokens": 4149,
+    "output": {
+      "content": "OTHER",
+      "reasoning": null,
+      "reasoning_content": null,
+      "tool_calls": null,
+      "finish_reason": "stop"
+    },
+    "request_id": "chatcmpl-a9bf817f2d7befba",
+    "output_sha256": "fc772557add6c44585aaf18d8b41d4a294f1c14471989ce7d62bd58f736a1c2b"
+  },
+  "spoolcache": {
+    "case": "spoolcache",
+    "cached_tokens": 2560,
+    "prompt_tokens": 4149,
+    "output": {
+      "content": "OTHER",
+      "reasoning": null,
+      "reasoning_content": null,
+      "tool_calls": null,
+      "finish_reason": "stop"
+    },
+    "request_id": "chatcmpl-a7a48ba144d4bdc2",
+    "output_sha256": "fc772557add6c44585aaf18d8b41d4a294f1c14471989ce7d62bd58f736a1c2b"
+  }
+}

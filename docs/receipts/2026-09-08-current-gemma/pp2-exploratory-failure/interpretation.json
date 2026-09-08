@@ -1,0 +1,13 @@
+{
+  "status": "output-consistency-failed",
+  "case": "mixed",
+  "cold_controls": [
+    "DOGS_SPEECH_STREET",
+    "DOGS_SPEECH_STREET"
+  ],
+  "restored_output": "OTHER",
+  "cached_tokens": 2560,
+  "all_rank_payloads": "authenticated",
+  "limitation": "The initial runner did not record its generated prompt nonce; exact prompt replay is unavailable from these API rows. The maintained runner now uses fixed prompt text and records commands/salts.",
+  "root_cause": "unresolved; neither current-change regression nor pre-existing runtime behavior has been established"
+}

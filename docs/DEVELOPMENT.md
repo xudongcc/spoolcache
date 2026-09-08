@@ -150,10 +150,103 @@ Use both with a fresh `--cache-salt` for cold controls. The interference benchma
 also uses both flags and generates a fresh salt for its GPU-only control. It
 checks that priming had zero cached tokens before measuring GPU reuse.
 
+## Fixed Gemma end-to-end regression
+
+After starting the isolated fixture with an authenticated candidate image, run
+`benchmarks/run_gemma_e2e.py`. The test matrix, prompt text and assertions are checked into
+the repository; running it does not require an Agent to generate a test plan.
+The client environment uses the ordinary development dependencies.
+
+Prepare the three [pinned media files](LAB.md#media-fixtures) under `MEDIA_DIR`,
+named `cats.jpg`, `archery.mp4` and `mary_had_lamb.ogg`. The runner checks their
+sizes and hashes before sending requests. Keep the build exports from above:
+
+```bash
+: "${MEDIA_DIR:?Set the directory containing the pinned media fixtures}"
+: "${QUALIFIED_IMAGE_ID:?Set the authenticated immutable Docker image ID}"
+uv run --locked python benchmarks/run_gemma_e2e.py \
+  --topology pp1 --head-container spoolcache-dev-vllm \
+  --image-id "$QUALIFIED_IMAGE_ID" --media-dir "$MEDIA_DIR" \
+  --output /tmp/spoolcache-gemma-pp1-receipt \
+  --restart-command 'docker compose restart vllm'
+```
+
+For the running two-node fixture, use:
+
+```bash
+: "${MEDIA_DIR:?Set the directory containing the pinned media fixtures}"
+: "${QUALIFIED_IMAGE_ID:?Set the authenticated immutable Docker image ID}"
+: "${WORKER_HOST:?Set the worker SSH host}"
+uv run --locked python benchmarks/run_gemma_e2e.py \
+  --topology pp2 --head-container spoolcache-gemma-pp2-head \
+  --worker-container spoolcache-gemma-pp2-worker --worker-host "$WORKER_HOST" \
+  --image-id "$QUALIFIED_IMAGE_ID" --media-dir "$MEDIA_DIR" \
+  --output /tmp/spoolcache-gemma-pp2-receipt \
+  --restart-command 'scripts/gemma-pp2-dev.sh restart'
+```
+
+Each output directory must be new. The restart command is parsed as an argument
+list without a shell; use a wrapper script for environment setup or multiple
+commands. It must restart every participant and retain the same cache roots.
+The runner checks that every container restarted with unchanged cache identities
+and the expected image/model revision. It leaves the service running afterwards;
+restore the prior lab state when finished.
+
+The fixed sequence covers text, image, audio, video and mixed inputs:
+
+1. Two independently salted cold controls with both persistent read/write skipped;
+   require zero cached tokens and identical complete output hashes.
+2. Publish a shorter prefix, clear process-local caches, then restore it into
+   the longer consumer. Require 2,048 cached tokens (2,560 for mixed input).
+3. Match the scheduler and every rank's entry/span and authenticate every
+   payload against independently logged runtime identity and page geometry.
+4. Verify independent `skip_read` / `skip_write` behavior, including unchanged
+   persistent manifest inventories when writes are disabled.
+5. Restart the whole group and repeat every restore, output and payload check.
+
+Each run uses fresh salts and records the request commands and results.
+A failed assertion exits nonzero and retains the evidence. `summary.json` is
+written only after the whole sequence passes. The output oracle establishes
+cache equivalence: a stable `OTHER` classification is recorded as such and does
+not prove media-recognition accuracy. Fault injection, maximum context, storage
+soak and additional runtime/topology compatibility are separate qualifications.
+
+## Diagnose a mixed-input output mismatch
+
+`benchmarks/probe_gemma_mixed_cache.py` reproduces one fixed Gemma PP=2 case
+and compares disk restore with **native GPU prefix caching at the same 2,560-token
+boundary**. Run it against the isolated two-node fixture:
+
+```bash
+: "${MEDIA_DIR:?Set the directory containing the pinned media fixtures}"
+: "${QUALIFIED_IMAGE_ID:?Set the authenticated immutable Docker image ID}"
+: "${WORKER_HOST:?Set the worker SSH host}"
+uv run --locked python benchmarks/probe_gemma_mixed_cache.py \
+  --worker-host "$WORKER_HOST" --image-id "$QUALIFIED_IMAGE_ID" \
+  --media-dir "$MEDIA_DIR" --output /tmp/spoolcache-mixed-diagnostic
+```
+
+The diagnostic keeps complete video/image media in a shorter native-cache
+producer, omitting the following audio/text. It proves the exact common token
+prefix, verifies actual native/disk hit counts, compares complete generated
+outputs and per-token log probabilities, and authenticates disk payloads on
+both ranks. Native-only controls skip both SpoolCache operations and must leave
+persistent manifest inventories unchanged. It also compares preserved versus
+reset encoder caches and repeats cold/native/disk requests.
+
+Its exit status means the diagnostic collected and checked its evidence;
+`summary.json` classifies the outcome. `divergence-reproduced-by-native-cache`
+means the default runtime reproduces the cold/cache difference without disk
+restore. It is **not** an e2e correctness pass. The fixed e2e runner retains its
+strict cold-output assertion. See the [diagnosis receipt](receipts/2026-09-08-gemma-mixed-diagnosis/README.md)
+for the connector-free baseline and the limits of `VLLM_BATCH_INVARIANT=1`.
+
 ## Maintained benchmark tools
 
 | Tool | Purpose |
 | --- | --- |
+| `probe_gemma_mixed_cache.py` | Reproduce and attribute a mixed-output difference using same-span native/disk controls |
+| `run_gemma_e2e.py` | Fixed five-input regression, request controls, all-rank payload checks and complete-group restart |
 | `bench_prefix_e2e.py` / `bench_multimodal_prefix_e2e.py` | Exact text or multimodal producer/consumer requests and independent read/write controls |
 | `bench_decode.py` / `bench_restore_interference.py` | Decode baselines and persistent-restore interference |
 | `bench_manifest_io.py` | Existing-entry direct-I/O timing |

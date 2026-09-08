@@ -1,0 +1,281 @@
+[
+  {
+    "case": "flags-control1",
+    "flags": {
+      "skip_read": true,
+      "skip_write": true
+    },
+    "request": {
+      "cached_tokens": 0,
+      "completion_tokens": 8,
+      "elapsed_seconds": 0.5680203090014402,
+      "output_preview": " \u05d4\u05e0\u05d5 \u0627\u0644\u0635\u062d\u064a\u05d3\u0e38 \u0928\u093e\u0e2d\u0e22\u0e48\u0e32\u0e07\u0c48\u0c28Di",
+      "output_sha256": "cb6c6591cd30754d27bebb1c1b3cbfdaf5513dc36e09c72b279537045d8194c0",
+      "prompt_source_tokens": 4128,
+      "prompt_tokens": 4128,
+      "request_id": "cmpl-a5e8d73a707ef4bd",
+      "target_tokens": 4128,
+      "ttft_seconds": 0.3754129550070502,
+      "nonce": "spoolcache-gemma-e2e-v1-text",
+      "cache_salt": "843e75f0d26e4e09b9adbe7f07eeaad6-flags-control1",
+      "command": [
+        "/root/projects/xudongcc/spoolcache/.venv/bin/python",
+        "/root/projects/xudongcc/spoolcache/benchmarks/bench_prefix_e2e.py",
+        "--api",
+        "http://127.0.0.1:8000",
+        "--model",
+        "google/gemma-4-E2B-it",
+        "--nonce",
+        "spoolcache-gemma-e2e-v1-text",
+        "--cache-salt",
+        "843e75f0d26e4e09b9adbe7f07eeaad6-flags-control1",
+        "--prompt-source-tokens",
+        "4128",
+        "--target-tokens",
+        "4128",
+        "--max-tokens",
+        "8",
+        "--skip-read",
+        "--skip-write"
+      ]
+    }
+  },
+  {
+    "case": "flags-control2",
+    "flags": {
+      "skip_read": true,
+      "skip_write": true
+    },
+    "request": {
+      "cached_tokens": 0,
+      "completion_tokens": 8,
+      "elapsed_seconds": 0.564277420999133,
+      "output_preview": " \u05d4\u05e0\u05d5 \u0627\u0644\u0635\u062d\u064a\u05d3\u0e38 \u0928\u093e\u0e2d\u0e22\u0e48\u0e32\u0e07\u0c48\u0c28Di",
+      "output_sha256": "cb6c6591cd30754d27bebb1c1b3cbfdaf5513dc36e09c72b279537045d8194c0",
+      "prompt_source_tokens": 4128,
+      "prompt_tokens": 4128,
+      "request_id": "cmpl-9707fc5831302427",
+      "target_tokens": 4128,
+      "ttft_seconds": 0.37264953399426304,
+      "nonce": "spoolcache-gemma-e2e-v1-text",
+      "cache_salt": "843e75f0d26e4e09b9adbe7f07eeaad6-flags-control2",
+      "command": [
+        "/root/projects/xudongcc/spoolcache/.venv/bin/python",
+        "/root/projects/xudongcc/spoolcache/benchmarks/bench_prefix_e2e.py",
+        "--api",
+        "http://127.0.0.1:8000",
+        "--model",
+        "google/gemma-4-E2B-it",
+        "--nonce",
+        "spoolcache-gemma-e2e-v1-text",
+        "--cache-salt",
+        "843e75f0d26e4e09b9adbe7f07eeaad6-flags-control2",
+        "--prompt-source-tokens",
+        "4128",
+        "--target-tokens",
+        "4128",
+        "--max-tokens",
+        "8",
+        "--skip-read",
+        "--skip-write"
+      ]
+    }
+  },
+  {
+    "case": "skip-write-producer",
+    "flags": {
+      "skip_write": true
+    },
+    "request": {
+      "cached_tokens": 0,
+      "completion_tokens": 8,
+      "elapsed_seconds": 0.5435116430016933,
+      "output_preview": "\n\n\n\n/ / calculators \u0a38\u0a2e \u09b8\u09c2",
+      "output_sha256": "73d1c790a51f0c2df5c57da20a9597e79beecce1033bf226945fe7b0bf530665",
+      "prompt_source_tokens": 4128,
+      "prompt_tokens": 4096,
+      "request_id": "cmpl-bce1f241918eda1d",
+      "target_tokens": 4096,
+      "ttft_seconds": 0.35298531100852415,
+      "nonce": "spoolcache-gemma-e2e-v1-text",
+      "cache_salt": "843e75f0d26e4e09b9adbe7f07eeaad6-flags-no-write",
+      "command": [
+        "/root/projects/xudongcc/spoolcache/.venv/bin/python",
+        "/root/projects/xudongcc/spoolcache/benchmarks/bench_prefix_e2e.py",
+        "--api",
+        "http://127.0.0.1:8000",
+        "--model",
+        "google/gemma-4-E2B-it",
+        "--nonce",
+        "spoolcache-gemma-e2e-v1-text",
+        "--cache-salt",
+        "843e75f0d26e4e09b9adbe7f07eeaad6-flags-no-write",
+        "--prompt-source-tokens",
+        "4128",
+        "--target-tokens",
+        "4096",
+        "--max-tokens",
+        "8",
+        "--skip-write"
+      ]
+    }
+  },
+  {
+    "case": "skip-write-consumer-misses",
+    "flags": {
+      "skip_write": true
+    },
+    "request": {
+      "cached_tokens": 0,
+      "completion_tokens": 8,
+      "elapsed_seconds": 0.5623472720035352,
+      "output_preview": " \u05d4\u05e0\u05d5 \u0627\u0644\u0635\u062d\u064a\u05d3\u0e38 \u0928\u093e\u0e2d\u0e22\u0e48\u0e32\u0e07\u0c48\u0c28Di",
+      "output_sha256": "cb6c6591cd30754d27bebb1c1b3cbfdaf5513dc36e09c72b279537045d8194c0",
+      "prompt_source_tokens": 4128,
+      "prompt_tokens": 4128,
+      "request_id": "cmpl-a166f2fe21480755",
+      "target_tokens": 4128,
+      "ttft_seconds": 0.3692874670086894,
+      "nonce": "spoolcache-gemma-e2e-v1-text",
+      "cache_salt": "843e75f0d26e4e09b9adbe7f07eeaad6-flags-no-write",
+      "command": [
+        "/root/projects/xudongcc/spoolcache/.venv/bin/python",
+        "/root/projects/xudongcc/spoolcache/benchmarks/bench_prefix_e2e.py",
+        "--api",
+        "http://127.0.0.1:8000",
+        "--model",
+        "google/gemma-4-E2B-it",
+        "--nonce",
+        "spoolcache-gemma-e2e-v1-text",
+        "--cache-salt",
+        "843e75f0d26e4e09b9adbe7f07eeaad6-flags-no-write",
+        "--prompt-source-tokens",
+        "4128",
+        "--target-tokens",
+        "4128",
+        "--max-tokens",
+        "8",
+        "--skip-write"
+      ]
+    }
+  },
+  {
+    "case": "skip-read-producer-stores",
+    "flags": {
+      "skip_read": true
+    },
+    "request": {
+      "cached_tokens": 0,
+      "completion_tokens": 8,
+      "elapsed_seconds": 0.7112531839957228,
+      "output_preview": "\n\n\n\n/ / calculators \u0a38\u0a2e \u09b8\u09c2",
+      "output_sha256": "73d1c790a51f0c2df5c57da20a9597e79beecce1033bf226945fe7b0bf530665",
+      "prompt_source_tokens": 4128,
+      "prompt_tokens": 4096,
+      "request_id": "cmpl-af77fed214be0c01",
+      "target_tokens": 4096,
+      "ttft_seconds": 0.5213141159911174,
+      "nonce": "spoolcache-gemma-e2e-v1-text",
+      "cache_salt": "843e75f0d26e4e09b9adbe7f07eeaad6-flags-save",
+      "command": [
+        "/root/projects/xudongcc/spoolcache/.venv/bin/python",
+        "/root/projects/xudongcc/spoolcache/benchmarks/bench_prefix_e2e.py",
+        "--api",
+        "http://127.0.0.1:8000",
+        "--model",
+        "google/gemma-4-E2B-it",
+        "--nonce",
+        "spoolcache-gemma-e2e-v1-text",
+        "--cache-salt",
+        "843e75f0d26e4e09b9adbe7f07eeaad6-flags-save",
+        "--prompt-source-tokens",
+        "4128",
+        "--target-tokens",
+        "4096",
+        "--max-tokens",
+        "8",
+        "--skip-read"
+      ]
+    }
+  },
+  {
+    "case": "skip-write-consumer-restores",
+    "flags": {
+      "skip_write": true
+    },
+    "request": {
+      "cached_tokens": 2048,
+      "completion_tokens": 8,
+      "elapsed_seconds": 0.4597110780014191,
+      "output_preview": " \u05d4\u05e0\u05d5 \u0627\u0644\u0635\u062d\u064a\u05d3\u0e38 \u0928\u093e\u0e2d\u0e22\u0e48\u0e32\u0e07\u0c48\u0c28Di",
+      "output_sha256": "cb6c6591cd30754d27bebb1c1b3cbfdaf5513dc36e09c72b279537045d8194c0",
+      "prompt_source_tokens": 4128,
+      "prompt_tokens": 4128,
+      "request_id": "cmpl-aebaff73200f7c75",
+      "target_tokens": 4128,
+      "ttft_seconds": 0.26925023600051645,
+      "nonce": "spoolcache-gemma-e2e-v1-text",
+      "cache_salt": "843e75f0d26e4e09b9adbe7f07eeaad6-flags-save",
+      "command": [
+        "/root/projects/xudongcc/spoolcache/.venv/bin/python",
+        "/root/projects/xudongcc/spoolcache/benchmarks/bench_prefix_e2e.py",
+        "--api",
+        "http://127.0.0.1:8000",
+        "--model",
+        "google/gemma-4-E2B-it",
+        "--nonce",
+        "spoolcache-gemma-e2e-v1-text",
+        "--cache-salt",
+        "843e75f0d26e4e09b9adbe7f07eeaad6-flags-save",
+        "--prompt-source-tokens",
+        "4128",
+        "--target-tokens",
+        "4128",
+        "--max-tokens",
+        "8",
+        "--skip-write"
+      ]
+    }
+  },
+  {
+    "case": "skip-read-existing-entry",
+    "flags": {
+      "skip_read": true,
+      "skip_write": true
+    },
+    "request": {
+      "cached_tokens": 0,
+      "completion_tokens": 8,
+      "elapsed_seconds": 0.566755367006408,
+      "output_preview": " \u05d4\u05e0\u05d5 \u0627\u0644\u0635\u062d\u064a\u05d3\u0e38 \u0928\u093e\u0e2d\u0e22\u0e48\u0e32\u0e07\u0c48\u0c28Di",
+      "output_sha256": "cb6c6591cd30754d27bebb1c1b3cbfdaf5513dc36e09c72b279537045d8194c0",
+      "prompt_source_tokens": 4128,
+      "prompt_tokens": 4128,
+      "request_id": "cmpl-bbfe3722c0de81d2",
+      "target_tokens": 4128,
+      "ttft_seconds": 0.37510506800026633,
+      "nonce": "spoolcache-gemma-e2e-v1-text",
+      "cache_salt": "843e75f0d26e4e09b9adbe7f07eeaad6-flags-save",
+      "command": [
+        "/root/projects/xudongcc/spoolcache/.venv/bin/python",
+        "/root/projects/xudongcc/spoolcache/benchmarks/bench_prefix_e2e.py",
+        "--api",
+        "http://127.0.0.1:8000",
+        "--model",
+        "google/gemma-4-E2B-it",
+        "--nonce",
+        "spoolcache-gemma-e2e-v1-text",
+        "--cache-salt",
+        "843e75f0d26e4e09b9adbe7f07eeaad6-flags-save",
+        "--prompt-source-tokens",
+        "4128",
+        "--target-tokens",
+        "4128",
+        "--max-tokens",
+        "8",
+        "--skip-read",
+        "--skip-write"
+      ]
+    }
+  }
+]

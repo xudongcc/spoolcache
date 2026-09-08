@@ -1,0 +1,96 @@
+{
+  "id": "chatcmpl-a8c74f88fae96cd1",
+  "object": "chat.completion",
+  "created": 1788858391,
+  "model": "google/gemma-4-E2B-it",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "user",
+        "content": "O",
+        "refusal": null,
+        "annotations": null,
+        "audio": null,
+        "function_call": null,
+        "reasoning": null
+      },
+      "logprobs": {
+        "content": [
+          {
+            "token": "O",
+            "logprob": -0.03411029651761055,
+            "bytes": [
+              79
+            ],
+            "top_logprobs": [
+              {
+                "token": "O",
+                "logprob": -0.03411029651761055,
+                "bytes": [
+                  79
+                ]
+              },
+              {
+                "token": "D",
+                "logprob": -5.159110069274902,
+                "bytes": [
+                  68
+                ]
+              },
+              {
+                "token": "C",
+                "logprob": -5.409110069274902,
+                "bytes": [
+                  67
+                ]
+              },
+              {
+                "token": "DO",
+                "logprob": -5.409110069274902,
+                "bytes": [
+                  68,
+                  79
+                ]
+              },
+              {
+                "token": "CA",
+                "logprob": -5.534110069274902,
+                "bytes": [
+                  67,
+                  65
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "finish_reason": "length",
+      "stop_reason": null,
+      "token_ids": null,
+      "routed_experts": null
+    }
+  ],
+  "service_tier": null,
+  "system_fingerprint": "vllm-0.28.0-pp2-1ac94b53",
+  "usage": {
+    "prompt_tokens": 2577,
+    "total_tokens": 2578,
+    "completion_tokens": 1,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "created_cache_tokens": 2560,
+      "multimodal_tokens": {
+        "video": 2303,
+        "image": 268
+      }
+    },
+    "completion_tokens_details": null
+  },
+  "prompt_logprobs": null,
+  "prompt_token_ids": null,
+  "prompt_text": null,
+  "kv_transfer_params": null,
+  "ec_transfer_params": null,
+  "metrics": null
+}

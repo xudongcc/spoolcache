@@ -40,20 +40,13 @@ Production images use a verified wheel; see [deployment](docs/DEPLOYMENT.md).
 
 ## Use
 
-Start with a model and immutable revision that already work in your vLLM runtime.
-Set `MODEL_ID` and `MODEL_REVISION` accordingly, then run:
+For example, start `google/gemma-4-E2B-it` with SpoolCache:
 
 ```bash
-: "${MODEL_ID:?Set your model identifier}"
-: "${MODEL_REVISION:?Set its immutable revision}"
-# Optional: SPOOLCACHE_PATH defaults to ~/.cache/spoolcache.
-# export SPOOLCACHE_PATH=/mnt/nvme/spoolcache
-
-KV_CONFIG=$(python -m spoolcache.vllm.config_json)
-vllm serve "$MODEL_ID" --revision "$MODEL_REVISION" \
+vllm serve google/gemma-4-E2B-it \
   --enable-prefix-caching \
   --enable-prompt-tokens-details \
-  --kv-transfer-config "$KV_CONFIG"
+  --kv-transfer-config "$(spoolcache config)"
 ```
 
 Keep your model's normal memory, topology and serving options. The configuration

@@ -1,0 +1,612 @@
+[
+  {
+    "kind": "text",
+    "rank": 0,
+    "expected": {
+      "rank-root": "/var/lib/spoolcache/597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc/rank-0000",
+      "entry-id": "ab9b6dd11f4b81d1b73ca3347ae6a5d11c186807675e03f1d818e683aa92e24a",
+      "expected-span": 2048,
+      "expected-deployment-identity-digest": "597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc",
+      "expected-rank-identity-digest": "f04bfea4fd80dbc3e5ceade3077dbcdfbe4a81d55f6800f2c44ddc249b7c0f66",
+      "expected-physical-rank": 0,
+      "expected-tp-degree": 1,
+      "expected-pp-degree": 2,
+      "expected-dcp-degree": 1,
+      "expected-pp-rank": 0,
+      "expected-tp-rank": 0,
+      "expected-dcp-rank": 0,
+      "expected-topology-digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "expected-layout-digest": "43c302e9dcf113977368b232e51fb521fae73c70beb9019b88ddc698fec165f4",
+      "expected-groups": 5,
+      "expected-layers": 12,
+      "expected-group-layers": "3,3,2,2,2",
+      "expected-pages": "16,16,16,16,128"
+    },
+    "verification": {
+      "content_index_sha256": "15dbc32c088aca408a17f03ea481d32764fbfbe2bb506d78c22aa6e8c641c89c",
+      "deployment_identity_digest": "597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc",
+      "entry_id": "ab9b6dd11f4b81d1b73ca3347ae6a5d11c186807675e03f1d818e683aa92e24a",
+      "group_layers": {
+        "0": 3,
+        "1": 3,
+        "2": 2,
+        "3": 2,
+        "4": 2
+      },
+      "group_pages": {
+        "0": 16,
+        "1": 16,
+        "2": 16,
+        "3": 16,
+        "4": 128
+      },
+      "groups": 5,
+      "layers": 12,
+      "layout_digest": "43c302e9dcf113977368b232e51fb521fae73c70beb9019b88ddc698fec165f4",
+      "logical_bytes": 13631488,
+      "manifest_payload_sha256": "37c552682fc3ed54f469d90c5253f45285f921a5a4b7fc177e19fb0e10c1ffa3",
+      "objects": 12,
+      "physical_rank": 0,
+      "profile": "vllm-runtime-kv-v1",
+      "rank_identity_digest": "f04bfea4fd80dbc3e5ceade3077dbcdfbe4a81d55f6800f2c44ddc249b7c0f66",
+      "span_tokens": 2048,
+      "status": "all-payloads-authenticated",
+      "stored_bytes": 13631488,
+      "topology_digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "worker_coordinate": {
+        "dcp_rank": 0,
+        "pp_rank": 0,
+        "tp_rank": 0
+      }
+    }
+  },
+  {
+    "kind": "text",
+    "rank": 1,
+    "expected": {
+      "rank-root": "/var/lib/spoolcache/6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3/rank-0001",
+      "entry-id": "ab9b6dd11f4b81d1b73ca3347ae6a5d11c186807675e03f1d818e683aa92e24a",
+      "expected-span": 2048,
+      "expected-deployment-identity-digest": "6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3",
+      "expected-rank-identity-digest": "d43be87fddd286a03a49de8889965ffb58c9a8bfe87f65fd794eec45d35e062a",
+      "expected-physical-rank": 1,
+      "expected-tp-degree": 1,
+      "expected-pp-degree": 2,
+      "expected-dcp-degree": 1,
+      "expected-pp-rank": 1,
+      "expected-tp-rank": 0,
+      "expected-dcp-rank": 0,
+      "expected-topology-digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "expected-layout-digest": "256ea6a7081412de4aacaa862d4dc5f995a40e5a0716c0e17d3979a3dd904b68",
+      "expected-groups": 5,
+      "expected-layers": 3,
+      "expected-group-layers": "0,0,1,1,1",
+      "expected-pages": "0,0,16,16,128"
+    },
+    "verification": {
+      "content_index_sha256": "edce8b6f54e33d6419123f89e979ca35e9353baccaa8cfff3e73d6e56b33e6bc",
+      "deployment_identity_digest": "6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3",
+      "entry_id": "ab9b6dd11f4b81d1b73ca3347ae6a5d11c186807675e03f1d818e683aa92e24a",
+      "group_layers": {
+        "0": 0,
+        "1": 0,
+        "2": 1,
+        "3": 1,
+        "4": 1
+      },
+      "group_pages": {
+        "0": 0,
+        "1": 0,
+        "2": 16,
+        "3": 16,
+        "4": 128
+      },
+      "groups": 5,
+      "layers": 3,
+      "layout_digest": "256ea6a7081412de4aacaa862d4dc5f995a40e5a0716c0e17d3979a3dd904b68",
+      "logical_bytes": 5242880,
+      "manifest_payload_sha256": "5b018e4d57b2c903bb48777b3d3f44b9cb4b049aaf8fac30804c1dc98a706d02",
+      "objects": 3,
+      "physical_rank": 1,
+      "profile": "vllm-runtime-kv-v1",
+      "rank_identity_digest": "d43be87fddd286a03a49de8889965ffb58c9a8bfe87f65fd794eec45d35e062a",
+      "span_tokens": 2048,
+      "status": "all-payloads-authenticated",
+      "stored_bytes": 5242880,
+      "topology_digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "worker_coordinate": {
+        "dcp_rank": 0,
+        "pp_rank": 1,
+        "tp_rank": 0
+      }
+    }
+  },
+  {
+    "kind": "image",
+    "rank": 0,
+    "expected": {
+      "rank-root": "/var/lib/spoolcache/597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc/rank-0000",
+      "entry-id": "50bb10b555539f26254c28a2546846d5b5b6168719c73772472374c0929a903d",
+      "expected-span": 2048,
+      "expected-deployment-identity-digest": "597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc",
+      "expected-rank-identity-digest": "f04bfea4fd80dbc3e5ceade3077dbcdfbe4a81d55f6800f2c44ddc249b7c0f66",
+      "expected-physical-rank": 0,
+      "expected-tp-degree": 1,
+      "expected-pp-degree": 2,
+      "expected-dcp-degree": 1,
+      "expected-pp-rank": 0,
+      "expected-tp-rank": 0,
+      "expected-dcp-rank": 0,
+      "expected-topology-digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "expected-layout-digest": "43c302e9dcf113977368b232e51fb521fae73c70beb9019b88ddc698fec165f4",
+      "expected-groups": 5,
+      "expected-layers": 12,
+      "expected-group-layers": "3,3,2,2,2",
+      "expected-pages": "16,16,16,16,128"
+    },
+    "verification": {
+      "content_index_sha256": "6441d9e90af64b3cf3c124c0520763fe53aa2cabf883898e2b97844c9539eda7",
+      "deployment_identity_digest": "597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc",
+      "entry_id": "50bb10b555539f26254c28a2546846d5b5b6168719c73772472374c0929a903d",
+      "group_layers": {
+        "0": 3,
+        "1": 3,
+        "2": 2,
+        "3": 2,
+        "4": 2
+      },
+      "group_pages": {
+        "0": 16,
+        "1": 16,
+        "2": 16,
+        "3": 16,
+        "4": 128
+      },
+      "groups": 5,
+      "layers": 12,
+      "layout_digest": "43c302e9dcf113977368b232e51fb521fae73c70beb9019b88ddc698fec165f4",
+      "logical_bytes": 13631488,
+      "manifest_payload_sha256": "010e5d97481e18e57bec2cae201413b285e2a11bb990d821fc4dd5f0e75faa58",
+      "objects": 12,
+      "physical_rank": 0,
+      "profile": "vllm-runtime-kv-v1",
+      "rank_identity_digest": "f04bfea4fd80dbc3e5ceade3077dbcdfbe4a81d55f6800f2c44ddc249b7c0f66",
+      "span_tokens": 2048,
+      "status": "all-payloads-authenticated",
+      "stored_bytes": 13631488,
+      "topology_digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "worker_coordinate": {
+        "dcp_rank": 0,
+        "pp_rank": 0,
+        "tp_rank": 0
+      }
+    }
+  },
+  {
+    "kind": "image",
+    "rank": 1,
+    "expected": {
+      "rank-root": "/var/lib/spoolcache/6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3/rank-0001",
+      "entry-id": "50bb10b555539f26254c28a2546846d5b5b6168719c73772472374c0929a903d",
+      "expected-span": 2048,
+      "expected-deployment-identity-digest": "6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3",
+      "expected-rank-identity-digest": "d43be87fddd286a03a49de8889965ffb58c9a8bfe87f65fd794eec45d35e062a",
+      "expected-physical-rank": 1,
+      "expected-tp-degree": 1,
+      "expected-pp-degree": 2,
+      "expected-dcp-degree": 1,
+      "expected-pp-rank": 1,
+      "expected-tp-rank": 0,
+      "expected-dcp-rank": 0,
+      "expected-topology-digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "expected-layout-digest": "256ea6a7081412de4aacaa862d4dc5f995a40e5a0716c0e17d3979a3dd904b68",
+      "expected-groups": 5,
+      "expected-layers": 3,
+      "expected-group-layers": "0,0,1,1,1",
+      "expected-pages": "0,0,16,16,128"
+    },
+    "verification": {
+      "content_index_sha256": "5df7b5b4c1d2a7fa172422b244f59837c9b868b8a3c25718382524acfe3716d1",
+      "deployment_identity_digest": "6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3",
+      "entry_id": "50bb10b555539f26254c28a2546846d5b5b6168719c73772472374c0929a903d",
+      "group_layers": {
+        "0": 0,
+        "1": 0,
+        "2": 1,
+        "3": 1,
+        "4": 1
+      },
+      "group_pages": {
+        "0": 0,
+        "1": 0,
+        "2": 16,
+        "3": 16,
+        "4": 128
+      },
+      "groups": 5,
+      "layers": 3,
+      "layout_digest": "256ea6a7081412de4aacaa862d4dc5f995a40e5a0716c0e17d3979a3dd904b68",
+      "logical_bytes": 5242880,
+      "manifest_payload_sha256": "c7f88617199c567a836953ebba3c659b7b48c0ab571de551d39c0a3110366c5e",
+      "objects": 3,
+      "physical_rank": 1,
+      "profile": "vllm-runtime-kv-v1",
+      "rank_identity_digest": "d43be87fddd286a03a49de8889965ffb58c9a8bfe87f65fd794eec45d35e062a",
+      "span_tokens": 2048,
+      "status": "all-payloads-authenticated",
+      "stored_bytes": 5242880,
+      "topology_digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "worker_coordinate": {
+        "dcp_rank": 0,
+        "pp_rank": 1,
+        "tp_rank": 0
+      }
+    }
+  },
+  {
+    "kind": "audio",
+    "rank": 0,
+    "expected": {
+      "rank-root": "/var/lib/spoolcache/597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc/rank-0000",
+      "entry-id": "a43f65b2a43bfe002c5f0712c7964ff59fdafc3e48cb916fe2efd2817c22a2e3",
+      "expected-span": 2048,
+      "expected-deployment-identity-digest": "597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc",
+      "expected-rank-identity-digest": "f04bfea4fd80dbc3e5ceade3077dbcdfbe4a81d55f6800f2c44ddc249b7c0f66",
+      "expected-physical-rank": 0,
+      "expected-tp-degree": 1,
+      "expected-pp-degree": 2,
+      "expected-dcp-degree": 1,
+      "expected-pp-rank": 0,
+      "expected-tp-rank": 0,
+      "expected-dcp-rank": 0,
+      "expected-topology-digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "expected-layout-digest": "43c302e9dcf113977368b232e51fb521fae73c70beb9019b88ddc698fec165f4",
+      "expected-groups": 5,
+      "expected-layers": 12,
+      "expected-group-layers": "3,3,2,2,2",
+      "expected-pages": "16,16,16,16,128"
+    },
+    "verification": {
+      "content_index_sha256": "906f4806897c00c1f7301a233a14c85d6eca50dd7d97ee497ff0ab8dcb6b8000",
+      "deployment_identity_digest": "597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc",
+      "entry_id": "a43f65b2a43bfe002c5f0712c7964ff59fdafc3e48cb916fe2efd2817c22a2e3",
+      "group_layers": {
+        "0": 3,
+        "1": 3,
+        "2": 2,
+        "3": 2,
+        "4": 2
+      },
+      "group_pages": {
+        "0": 16,
+        "1": 16,
+        "2": 16,
+        "3": 16,
+        "4": 128
+      },
+      "groups": 5,
+      "layers": 12,
+      "layout_digest": "43c302e9dcf113977368b232e51fb521fae73c70beb9019b88ddc698fec165f4",
+      "logical_bytes": 13631488,
+      "manifest_payload_sha256": "2161f40b993acd40438b32a867bc80b31b85174aa624d14f91366b15147dd610",
+      "objects": 12,
+      "physical_rank": 0,
+      "profile": "vllm-runtime-kv-v1",
+      "rank_identity_digest": "f04bfea4fd80dbc3e5ceade3077dbcdfbe4a81d55f6800f2c44ddc249b7c0f66",
+      "span_tokens": 2048,
+      "status": "all-payloads-authenticated",
+      "stored_bytes": 13631488,
+      "topology_digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "worker_coordinate": {
+        "dcp_rank": 0,
+        "pp_rank": 0,
+        "tp_rank": 0
+      }
+    }
+  },
+  {
+    "kind": "audio",
+    "rank": 1,
+    "expected": {
+      "rank-root": "/var/lib/spoolcache/6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3/rank-0001",
+      "entry-id": "a43f65b2a43bfe002c5f0712c7964ff59fdafc3e48cb916fe2efd2817c22a2e3",
+      "expected-span": 2048,
+      "expected-deployment-identity-digest": "6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3",
+      "expected-rank-identity-digest": "d43be87fddd286a03a49de8889965ffb58c9a8bfe87f65fd794eec45d35e062a",
+      "expected-physical-rank": 1,
+      "expected-tp-degree": 1,
+      "expected-pp-degree": 2,
+      "expected-dcp-degree": 1,
+      "expected-pp-rank": 1,
+      "expected-tp-rank": 0,
+      "expected-dcp-rank": 0,
+      "expected-topology-digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "expected-layout-digest": "256ea6a7081412de4aacaa862d4dc5f995a40e5a0716c0e17d3979a3dd904b68",
+      "expected-groups": 5,
+      "expected-layers": 3,
+      "expected-group-layers": "0,0,1,1,1",
+      "expected-pages": "0,0,16,16,128"
+    },
+    "verification": {
+      "content_index_sha256": "a76ccdae686550b9ba463aa9dc0bf7e6f6a1f96a4ce35d05d922c4062f899326",
+      "deployment_identity_digest": "6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3",
+      "entry_id": "a43f65b2a43bfe002c5f0712c7964ff59fdafc3e48cb916fe2efd2817c22a2e3",
+      "group_layers": {
+        "0": 0,
+        "1": 0,
+        "2": 1,
+        "3": 1,
+        "4": 1
+      },
+      "group_pages": {
+        "0": 0,
+        "1": 0,
+        "2": 16,
+        "3": 16,
+        "4": 128
+      },
+      "groups": 5,
+      "layers": 3,
+      "layout_digest": "256ea6a7081412de4aacaa862d4dc5f995a40e5a0716c0e17d3979a3dd904b68",
+      "logical_bytes": 5242880,
+      "manifest_payload_sha256": "1fd1ab431ae4d2c106a535997321e22cafcc66d59bb121769242867b2274f6d5",
+      "objects": 3,
+      "physical_rank": 1,
+      "profile": "vllm-runtime-kv-v1",
+      "rank_identity_digest": "d43be87fddd286a03a49de8889965ffb58c9a8bfe87f65fd794eec45d35e062a",
+      "span_tokens": 2048,
+      "status": "all-payloads-authenticated",
+      "stored_bytes": 5242880,
+      "topology_digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "worker_coordinate": {
+        "dcp_rank": 0,
+        "pp_rank": 1,
+        "tp_rank": 0
+      }
+    }
+  },
+  {
+    "kind": "video",
+    "rank": 0,
+    "expected": {
+      "rank-root": "/var/lib/spoolcache/597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc/rank-0000",
+      "entry-id": "31383c0bcba84c3151165a4cb62ef5b50c1d6d1fba28d41ec6a16ca35ab724b2",
+      "expected-span": 2048,
+      "expected-deployment-identity-digest": "597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc",
+      "expected-rank-identity-digest": "f04bfea4fd80dbc3e5ceade3077dbcdfbe4a81d55f6800f2c44ddc249b7c0f66",
+      "expected-physical-rank": 0,
+      "expected-tp-degree": 1,
+      "expected-pp-degree": 2,
+      "expected-dcp-degree": 1,
+      "expected-pp-rank": 0,
+      "expected-tp-rank": 0,
+      "expected-dcp-rank": 0,
+      "expected-topology-digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "expected-layout-digest": "43c302e9dcf113977368b232e51fb521fae73c70beb9019b88ddc698fec165f4",
+      "expected-groups": 5,
+      "expected-layers": 12,
+      "expected-group-layers": "3,3,2,2,2",
+      "expected-pages": "16,16,16,16,128"
+    },
+    "verification": {
+      "content_index_sha256": "8ad37eeeadad9b4201754a5f2d530645f41ecbe846027e7a9f5de0d377aea10c",
+      "deployment_identity_digest": "597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc",
+      "entry_id": "31383c0bcba84c3151165a4cb62ef5b50c1d6d1fba28d41ec6a16ca35ab724b2",
+      "group_layers": {
+        "0": 3,
+        "1": 3,
+        "2": 2,
+        "3": 2,
+        "4": 2
+      },
+      "group_pages": {
+        "0": 16,
+        "1": 16,
+        "2": 16,
+        "3": 16,
+        "4": 128
+      },
+      "groups": 5,
+      "layers": 12,
+      "layout_digest": "43c302e9dcf113977368b232e51fb521fae73c70beb9019b88ddc698fec165f4",
+      "logical_bytes": 13631488,
+      "manifest_payload_sha256": "80578342c5a13429a25a9f43f377167ec2f319b924ce98c2c960745e573aa570",
+      "objects": 12,
+      "physical_rank": 0,
+      "profile": "vllm-runtime-kv-v1",
+      "rank_identity_digest": "f04bfea4fd80dbc3e5ceade3077dbcdfbe4a81d55f6800f2c44ddc249b7c0f66",
+      "span_tokens": 2048,
+      "status": "all-payloads-authenticated",
+      "stored_bytes": 13631488,
+      "topology_digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "worker_coordinate": {
+        "dcp_rank": 0,
+        "pp_rank": 0,
+        "tp_rank": 0
+      }
+    }
+  },
+  {
+    "kind": "video",
+    "rank": 1,
+    "expected": {
+      "rank-root": "/var/lib/spoolcache/6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3/rank-0001",
+      "entry-id": "31383c0bcba84c3151165a4cb62ef5b50c1d6d1fba28d41ec6a16ca35ab724b2",
+      "expected-span": 2048,
+      "expected-deployment-identity-digest": "6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3",
+      "expected-rank-identity-digest": "d43be87fddd286a03a49de8889965ffb58c9a8bfe87f65fd794eec45d35e062a",
+      "expected-physical-rank": 1,
+      "expected-tp-degree": 1,
+      "expected-pp-degree": 2,
+      "expected-dcp-degree": 1,
+      "expected-pp-rank": 1,
+      "expected-tp-rank": 0,
+      "expected-dcp-rank": 0,
+      "expected-topology-digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "expected-layout-digest": "256ea6a7081412de4aacaa862d4dc5f995a40e5a0716c0e17d3979a3dd904b68",
+      "expected-groups": 5,
+      "expected-layers": 3,
+      "expected-group-layers": "0,0,1,1,1",
+      "expected-pages": "0,0,16,16,128"
+    },
+    "verification": {
+      "content_index_sha256": "4ff3c5be8729616b7f2d881c23b59e02f389491f3fe6e1d27033e4b76d4d256e",
+      "deployment_identity_digest": "6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3",
+      "entry_id": "31383c0bcba84c3151165a4cb62ef5b50c1d6d1fba28d41ec6a16ca35ab724b2",
+      "group_layers": {
+        "0": 0,
+        "1": 0,
+        "2": 1,
+        "3": 1,
+        "4": 1
+      },
+      "group_pages": {
+        "0": 0,
+        "1": 0,
+        "2": 16,
+        "3": 16,
+        "4": 128
+      },
+      "groups": 5,
+      "layers": 3,
+      "layout_digest": "256ea6a7081412de4aacaa862d4dc5f995a40e5a0716c0e17d3979a3dd904b68",
+      "logical_bytes": 5242880,
+      "manifest_payload_sha256": "0ca11fbd403fd528b8b4a39010cd8dbba9343bfc766b7cee9831f91645cef56c",
+      "objects": 3,
+      "physical_rank": 1,
+      "profile": "vllm-runtime-kv-v1",
+      "rank_identity_digest": "d43be87fddd286a03a49de8889965ffb58c9a8bfe87f65fd794eec45d35e062a",
+      "span_tokens": 2048,
+      "status": "all-payloads-authenticated",
+      "stored_bytes": 5242880,
+      "topology_digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "worker_coordinate": {
+        "dcp_rank": 0,
+        "pp_rank": 1,
+        "tp_rank": 0
+      }
+    }
+  },
+  {
+    "kind": "mixed",
+    "rank": 0,
+    "expected": {
+      "rank-root": "/var/lib/spoolcache/597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc/rank-0000",
+      "entry-id": "d68b77872429da7ab0b101ce2f567a135b0f004b46cce69efac574ace6e034b3",
+      "expected-span": 2560,
+      "expected-deployment-identity-digest": "597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc",
+      "expected-rank-identity-digest": "f04bfea4fd80dbc3e5ceade3077dbcdfbe4a81d55f6800f2c44ddc249b7c0f66",
+      "expected-physical-rank": 0,
+      "expected-tp-degree": 1,
+      "expected-pp-degree": 2,
+      "expected-dcp-degree": 1,
+      "expected-pp-rank": 0,
+      "expected-tp-rank": 0,
+      "expected-dcp-rank": 0,
+      "expected-topology-digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "expected-layout-digest": "43c302e9dcf113977368b232e51fb521fae73c70beb9019b88ddc698fec165f4",
+      "expected-groups": 5,
+      "expected-layers": 12,
+      "expected-group-layers": "3,3,2,2,2",
+      "expected-pages": "16,16,16,16,160"
+    },
+    "verification": {
+      "content_index_sha256": "c978578e22345ca08755df2f0f48f4f9c5938a6c4d10e4d70579ebfb6e532c53",
+      "deployment_identity_digest": "597889d8807f4ca2adb5b22b899d17209e75bc85f21b9e327c46d776591371bc",
+      "entry_id": "d68b77872429da7ab0b101ce2f567a135b0f004b46cce69efac574ace6e034b3",
+      "group_layers": {
+        "0": 3,
+        "1": 3,
+        "2": 2,
+        "3": 2,
+        "4": 2
+      },
+      "group_pages": {
+        "0": 16,
+        "1": 16,
+        "2": 16,
+        "3": 16,
+        "4": 160
+      },
+      "groups": 5,
+      "layers": 12,
+      "layout_digest": "43c302e9dcf113977368b232e51fb521fae73c70beb9019b88ddc698fec165f4",
+      "logical_bytes": 15728640,
+      "manifest_payload_sha256": "0462d4b6a3e2b3b0cb1d7428fb48d77bd3579966e15bad38276fbc0436c3b807",
+      "objects": 12,
+      "physical_rank": 0,
+      "profile": "vllm-runtime-kv-v1",
+      "rank_identity_digest": "f04bfea4fd80dbc3e5ceade3077dbcdfbe4a81d55f6800f2c44ddc249b7c0f66",
+      "span_tokens": 2560,
+      "status": "all-payloads-authenticated",
+      "stored_bytes": 15728640,
+      "topology_digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "worker_coordinate": {
+        "dcp_rank": 0,
+        "pp_rank": 0,
+        "tp_rank": 0
+      }
+    }
+  },
+  {
+    "kind": "mixed",
+    "rank": 1,
+    "expected": {
+      "rank-root": "/var/lib/spoolcache/6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3/rank-0001",
+      "entry-id": "d68b77872429da7ab0b101ce2f567a135b0f004b46cce69efac574ace6e034b3",
+      "expected-span": 2560,
+      "expected-deployment-identity-digest": "6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3",
+      "expected-rank-identity-digest": "d43be87fddd286a03a49de8889965ffb58c9a8bfe87f65fd794eec45d35e062a",
+      "expected-physical-rank": 1,
+      "expected-tp-degree": 1,
+      "expected-pp-degree": 2,
+      "expected-dcp-degree": 1,
+      "expected-pp-rank": 1,
+      "expected-tp-rank": 0,
+      "expected-dcp-rank": 0,
+      "expected-topology-digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "expected-layout-digest": "256ea6a7081412de4aacaa862d4dc5f995a40e5a0716c0e17d3979a3dd904b68",
+      "expected-groups": 5,
+      "expected-layers": 3,
+      "expected-group-layers": "0,0,1,1,1",
+      "expected-pages": "0,0,16,16,160"
+    },
+    "verification": {
+      "content_index_sha256": "c907f30cc00264aeb1f1e1da9848b803e8e1909dd13d83c043a7a15d7b76f2fb",
+      "deployment_identity_digest": "6c1924009b2b5008f2a2b90d4f0121cc154465211af3a2d2b1b1c67c8b5b5ab3",
+      "entry_id": "d68b77872429da7ab0b101ce2f567a135b0f004b46cce69efac574ace6e034b3",
+      "group_layers": {
+        "0": 0,
+        "1": 0,
+        "2": 1,
+        "3": 1,
+        "4": 1
+      },
+      "group_pages": {
+        "0": 0,
+        "1": 0,
+        "2": 16,
+        "3": 16,
+        "4": 160
+      },
+      "groups": 5,
+      "layers": 3,
+      "layout_digest": "256ea6a7081412de4aacaa862d4dc5f995a40e5a0716c0e17d3979a3dd904b68",
+      "logical_bytes": 6291456,
+      "manifest_payload_sha256": "0d31d2c8dac6fef6d769ae8f08d5fd5edbbd464752883c795d4d453f91ce9f37",
+      "objects": 3,
+      "physical_rank": 1,
+      "profile": "vllm-runtime-kv-v1",
+      "rank_identity_digest": "d43be87fddd286a03a49de8889965ffb58c9a8bfe87f65fd794eec45d35e062a",
+      "span_tokens": 2560,
+      "status": "all-payloads-authenticated",
+      "stored_bytes": 6291456,
+      "topology_digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+      "worker_coordinate": {
+        "dcp_rank": 0,
+        "pp_rank": 1,
+        "tp_rank": 0
+      }
+    }
+  }
+]

@@ -50,7 +50,7 @@ From a checkout containing the current changes, in the intended Python environme
 ```bash
 python -m pip install -e .
 spoolcache --help
-python -m spoolcache.vllm.config_json
+spoolcache config
 ```
 
 Editable installation is for local development. It does not create a release

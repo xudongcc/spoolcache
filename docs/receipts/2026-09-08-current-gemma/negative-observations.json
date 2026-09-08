@@ -1,0 +1,15 @@
+{
+  "mixed_pp1_cold_oracle": {
+    "expected": "CATS_MARY_ARCHERY",
+    "observed": [
+      "OTHER",
+      "OTHER"
+    ],
+    "cached_tokens": [
+      0,
+      0
+    ],
+    "source": "live/pp1/mixed-control1.json and mixed-control2.json",
+    "interpretation": "Cold skip-read/skip-write controls do not classify the long mixed prompt correctly. Mixed qualification checks deterministic output equivalence and persistent payload integrity, not semantic classification accuracy."
+  }
+}

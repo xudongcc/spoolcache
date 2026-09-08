@@ -4,8 +4,12 @@ SpoolCache has two public connector settings. The environment renderer converts
 them to vLLM's `--kv-transfer-config` JSON and validates values before returning it:
 
 ```bash
-python -m spoolcache.vllm.config_json
+spoolcache config
 ```
+
+The command prints one compact JSON object to stdout, reading `SPOOLCACHE_PATH`
+and `SPOOLCACHE_MAX_SIZE`. It does not start vLLM or create cache directories.
+Invalid settings produce an error on stderr and a nonzero exit code.
 
 Environment variables alone do not attach the connector to vLLM. Pass the result
 with `--kv-transfer-config` as shown in the [README](../README.md#use).

@@ -8,6 +8,7 @@ wheel containing the new interfaces before switching production configuration.
 | Surface | Published 0.1.0 / previous launchers | Current checkout |
 | --- | --- | --- |
 | Maintenance command | `spoolcache-maintenance` | `spoolcache` |
+| Connector configuration command | `python -m spoolcache.vllm.config_json` | `spoolcache config`; the same renderer supplies validated JSON |
 | Python maintenance entry point | `spoolcache.maintenance:main` | Unchanged |
 | Environment path | `SPOOLCACHE_CONTAINER_ROOT` | `SPOOLCACHE_PATH` |
 | Connector JSON path | `spoolcache_root` / `root` | `spoolcache_path` / `path` |
@@ -30,8 +31,8 @@ wheel containing the new interfaces before switching production configuration.
 
 Old JSON keys are rejected, rather than treated as aliases. The environment
 renderer no longer reads the old variables. Update shell automation and Python
-callers together. The maintenance subcommands, arguments and JSON response
-semantics are unchanged.
+callers together. The `request` and `status` maintenance subcommands, arguments
+and JSON response semantics are unchanged. The new `config` subcommand renders connector JSON.
 
 GB follows the LMCache convention: 1 GB = 1024³ bytes (GiB). Divide an old
 byte limit by `1073741824` when converting it; do not copy the old byte count

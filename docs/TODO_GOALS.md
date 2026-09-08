@@ -113,6 +113,37 @@ are recorded in [Compatibility](COMPATIBILITY.md#published-artifact-and-local-ch
 The [protocol boundaries](SPOOLCACHE_DESIGN.md#internal-protocol-boundaries) document
 which identifiers remain necessary. This cleanup is local and unreleased.
 
+## Local CLI configuration output
+
+- [x] Add `spoolcache config` using the existing validated environment renderer;
+  print compact JSON without starting vLLM or creating cache directories.
+- [x] Reject invalid settings with an error on stderr and no partial JSON.
+- [x] Update current usage examples to pass `$(spoolcache config)` to vLLM;
+  retain the existing maintenance request/status contracts.
+
+CLI subprocess tests cover defaults, home expansion, capacity overrides and
+invalid inputs. This addition remains unreleased.
+
+## Current Gemma regression and fixed e2e runner
+
+- [x] Add a maintained five-input runner with repeated cold controls, exact
+  persistent hit counts, independent request flags, all-rank payload verification
+  and whole-group restart checks. See [Development](DEVELOPMENT.md#fixed-gemma-end-to-end-regression).
+- [x] Reject unstable controls, wrong outputs, missing rank evidence and partial
+  restarts through CPU tests; retain machine-readable live failures.
+- [x] Build and authenticate an isolated current-code candidate and run the
+  installed vLLM/CUDA tests and real Gemma PP=1/PP=2 checks.
+- [x] Reproduce and diagnose the PP=2 mixed-input cold/restore difference using
+  same-span native GPU controls; retain the strict cold-output gate and numerical
+  reproducibility limit. See the [follow-up diagnosis](receipts/2026-09-08-gemma-mixed-diagnosis/README.md).
+
+The [current receipt](receipts/2026-09-08-current-gemma/README.md) distinguishes
+successful cases from the initial finding. The follow-up attributes the
+reproduced difference to the runtime caching path; it does not claim that the
+default runtime now guarantees cold/cache output equality. Historical G4/G6 qualification remains
+scoped to its original artifacts. No current package behavior was changed to
+make the live output assertion pass, and this candidate is unreleased.
+
 ## Q1 remaining qualification
 
 Q1 adds deployment evidence without changing core admission logic:

@@ -1,0 +1,76 @@
+{
+  "status": "divergence-reproduced-without-connector",
+  "native_matches_disk_probabilities": true,
+  "rows": {
+    "native1": {
+      "case": "native1",
+      "cached_tokens": 2560,
+      "prompt_tokens": 4149,
+      "output": {
+        "content": "DOGS_SPEECH_STREET",
+        "reasoning": null,
+        "reasoning_content": null,
+        "tool_calls": null,
+        "finish_reason": "stop"
+      },
+      "request_id": "chatcmpl-a6e510f482fbad51",
+      "output_sha256": "928708a9073dc5d193feda849765aa6c516f80a39c6b13b6959431b8064d779c"
+    },
+    "native2": {
+      "case": "native2",
+      "cached_tokens": 2560,
+      "prompt_tokens": 4149,
+      "output": {
+        "content": "DOGS_SPEECH_STREET",
+        "reasoning": null,
+        "reasoning_content": null,
+        "tool_calls": null,
+        "finish_reason": "stop"
+      },
+      "request_id": "chatcmpl-87292b8ae73341dc",
+      "output_sha256": "928708a9073dc5d193feda849765aa6c516f80a39c6b13b6959431b8064d779c"
+    },
+    "native3": {
+      "case": "native3",
+      "cached_tokens": 2560,
+      "prompt_tokens": 4149,
+      "output": {
+        "content": "DOGS_SPEECH_STREET",
+        "reasoning": null,
+        "reasoning_content": null,
+        "tool_calls": null,
+        "finish_reason": "stop"
+      },
+      "request_id": "chatcmpl-aa6c5b8bdbd5b1ce",
+      "output_sha256": "928708a9073dc5d193feda849765aa6c516f80a39c6b13b6959431b8064d779c"
+    },
+    "cold": {
+      "case": "cold",
+      "cached_tokens": 0,
+      "prompt_tokens": 4149,
+      "output": {
+        "content": "OTHER",
+        "reasoning": null,
+        "reasoning_content": null,
+        "tool_calls": null,
+        "finish_reason": "stop"
+      },
+      "request_id": "chatcmpl-b78adbcd9ea5d97c",
+      "output_sha256": "fc772557add6c44585aaf18d8b41d4a294f1c14471989ce7d62bd58f736a1c2b"
+    },
+    "cold-repeat": {
+      "case": "cold-repeat",
+      "cached_tokens": 0,
+      "prompt_tokens": 4149,
+      "output": {
+        "content": "OTHER",
+        "reasoning": null,
+        "reasoning_content": null,
+        "tool_calls": null,
+        "finish_reason": "stop"
+      },
+      "request_id": "chatcmpl-bd6ce4d5c6772cb1",
+      "output_sha256": "fc772557add6c44585aaf18d8b41d4a294f1c14471989ce7d62bd58f736a1c2b"
+    }
+  }
+}

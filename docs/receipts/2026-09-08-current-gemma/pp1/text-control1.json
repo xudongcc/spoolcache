@@ -1,0 +1,12 @@
+{
+  "cached_tokens": 0,
+  "completion_tokens": 8,
+  "elapsed_seconds": 1.458844720007619,
+  "output_preview": " iota kappa. alpha beta gamma delta",
+  "output_sha256": "c03fc4b4ce91774d3dfbac0f2aa6506b969a0e061d53c5d4494fee232cf3d869",
+  "prompt_source_tokens": 4128,
+  "prompt_tokens": 4128,
+  "request_id": "cmpl-81ef46b2d3481156",
+  "target_tokens": 4128,
+  "ttft_seconds": 1.2805139160045655
+}

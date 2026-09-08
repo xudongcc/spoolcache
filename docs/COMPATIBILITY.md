@@ -51,11 +51,25 @@ authenticated the published 0.1.0 wheel in four runtime images on both hosts.
 The qualification carry-forward used equality of package payloads, not merely a
 matching version string.
 
-The current unreleased CLI, direct-I/O, path, capacity, namespace removal and
-request-control and protocol-cleanup changes passed 277 host tests and 361 subtests; 12 Torch/CUDA/vLLM-dependent
-tests were skipped. The three local deployment repositories passed 17 launcher
-tests. These are CPU/configuration and simulated connector checks, without a
-new image build, live-model run or PyPI release qualification.
+The current unreleased package was built as an isolated `0.2.0rc1` candidate
+from a committed snapshot of the working tree. Its installed bytes were
+verified on both hosts; the package source still matches the working tree
+except for the candidate's python-semantic-release version stamp. Real vLLM
+0.28.0/CUDA tests completed with 284 passes and one runtime-dependent skip.
+The host suite passed 292 tests and 373 subtests, with 12 runtime-dependent skips.
+
+The new [Gemma regression receipt](receipts/2026-09-08-current-gemma/README.md)
+records PP=1 text/image/audio/video/mixed persistence and restart checks, and
+PP=2 testing. An initial PP=2 mixed prompt failed the strict cold-output gate:
+matching cold controls differed from restored output despite matching all-rank
+entries and authenticated payloads.
+The [follow-up diagnosis](receipts/2026-09-08-gemma-mixed-diagnosis/README.md)
+attributes a reproducible instance to the runtime's prefix-cache computation:
+same-span native GPU caching and disk restore produce identical token
+probabilities, while cold computation differs. The original cold-output gate
+remains strict; a different passing prompt or batch-invariant output does not
+establish universal numerical equivalence. This candidate has
+not been published.
 
 Checks cover the two-setting configuration, unchanged 200 GiB capacity,
 fractional sizes, rejected legacy namespace keys, model/salt separation,
@@ -70,8 +84,13 @@ The repository residue audit also checked current source/configuration/docs and
 all three linked launcher integrations. Fourteen Python CLI help commands,
 Python compilation, shell syntax and documentation links/examples passed.
 Removed scripts were the superseded single-image client and inactive layerwise
-and shared-staging probes. Historical receipts/results remain unchanged; these
-checks do not qualify a new CUDA or live-model artifact.
+and shared-staging probes. Historical receipts/results remain unchanged; that
+audit alone did not qualify a CUDA or live-model artifact. The separately linked
+current Gemma receipt records the later live checks and their unresolved limit.
+
+CLI subprocess checks also cover `spoolcache config`: default and overridden
+settings, compact JSON output, no cache-directory creation, and invalid settings
+reported on stderr without partial JSON. Existing request/status checks still pass.
 
 ## Known limits
 

@@ -1,0 +1,60 @@
+{
+  "run": "/tmp/spoolcache-mixed-investigation-fjj531x7",
+  "source": "/tmp/spoolcache-gemma-current-iitfrkyo/source",
+  "workspace_commit": "76953902aa3fae7444c2404f62bf7454a39fdf9b",
+  "snapshot_commit": "be53624aa4bb1dacc91176926d9a982f16fe905d",
+  "workspace_diff_sha256": "948bba51f6df0025fb840a755a45a3603194c6597fbd6716b5ec7b11dc157c00",
+  "source_files": {
+    "src/spoolcache/admission.py": "7a6b4e86e98e8d62d5f5e6313f3993c97b216c3de5771d3b23efe67e38ef77ad",
+    "src/spoolcache/telemetry.py": "c229069f41928ce896c6a3fedd6cc9b3c200416b65baf574f5dc95c6268d5072",
+    "src/spoolcache/maintenance.py": "03f4073ae9adfdc6bd7d52245babac557cb8992b86d0b5c7d35bd255fa278905",
+    "src/spoolcache/buffers.py": "1b41c2cff3ba18bdc1ea3afdac117979774f5c48cd36f0e935d33dae56f67873",
+    "src/spoolcache/fail_stop.py": "7873236d573b61d5527bf968848560cefe8223d116c1b74613c17d2a7dcd2899",
+    "src/spoolcache/prefix.py": "21777d4c505554f2496d21c013202b2972c789ff060f2b3b4667659f628ec26e",
+    "src/spoolcache/gpu.py": "ceaed00384e1b70a77f57ecd5f868fcf35601b95461cf4a1464bc66df405e9f4",
+    "src/spoolcache/config.py": "60da0e03cc0724d366a7f1b248e06979dbeda7dec7aebafae6a4b21660e5b996",
+    "src/spoolcache/__init__.py": "de656256b9b4bb837f6d1b4558958e0642c630408d160bdfda71f6c2f4770a16",
+    "src/spoolcache/hma.py": "3c9fd3f9b7adf1dfa6023ebbe9efd8d0f5f0c1d43f9bfcaab06593499ead8b8c",
+    "src/spoolcache/event_journal.py": "b00c6287f418b6b804aab055a040dc0cf6f92564ce4d452056f1dc7c98d4c6e2",
+    "src/spoolcache/manifest.py": "8cc1a1e5a70861aa187257fed3216cb84aac3e4c6c82d4e2fffdf050b126fce2",
+    "src/spoolcache/errors.py": "dd5f074c5fc24e229310b94cb71b3fc952668a15d9ffa18755de008b26c9d5d5",
+    "src/spoolcache/identity.py": "5d7d8da595153a265d0f7ca948d693c4dabf281b669539a8e3ab0c515557ec8e",
+    "src/spoolcache/topology.py": "6a4db2a9baae19c637d64fb5643dd724220f364eaa291bad5bed0bf59748a5e5",
+    "src/spoolcache/store.py": "be7719293908e1c8b1fe2fe20d6773aa3b2b10325caa5e0483e555e09da9f040",
+    "src/spoolcache/quorum.py": "903fd7d8a533232c6b3ba87154359a89068c696e5216f644f9ac15f7dfd681b2",
+    "src/spoolcache/vllm/compat.py": "eb9ce64eae85257276fff1a66a84a0788e2302cf8dbe8921b0ce42c22f40abd8",
+    "src/spoolcache/vllm/__init__.py": "2bdee6f8efd4dfcaad1c95da27deec98aaee63698ac142317a08b947843c8bf8",
+    "src/spoolcache/vllm/connector.py": "396db71c5eacc74d785506156c6ada5c1837727fd2bf7154d29e846a648433d0",
+    "src/spoolcache/vllm/config_json.py": "a66c2d57ec166d79f8630d86fd9a02e3a5519d336810f9f30ab08cd6204c21bc",
+    "src/spoolcache/vllm/prometheus.py": "b0692bbaf3e95984f8ec4eb71bb39b44d1a2b5cb606e855492c4de4a5aedfbda"
+  },
+  "original_image": "sha256:a72a4c801a6f4c092473a5fcf2b36b6f8cd8a88c3429c23fc35e5fd2c179e47d",
+  "prior_services": "none on either host",
+  "release": {
+    "schema": "spoolcache-release/v1",
+    "commit": "eabe045bd4b55188846dc6fe6fa09bbebe06798c",
+    "source_date_epoch": 1788855297,
+    "wheel": "spoolcache-0.2.0rc1-py3-none-any.whl",
+    "wheel_sha256": "8867bc5be29036f4ebdee390003637124c216844270a5eb052290cb7c1bac6c9",
+    "build_requires": [
+      "setuptools==80.9.0",
+      "wheel==0.45.1"
+    ]
+  },
+  "test_image_tag": "spoolcache-gemma-current:rc1-iitfrkyo",
+  "remote_original_image": "sha256:a72a4c801a6f4c092473a5fcf2b36b6f8cd8a88c3429c23fc35e5fd2c179e47d",
+  "image_id": "sha256:50b0e439e80815ba05cf9d14bbe43c8711bcbe6691b9946844501658db58c309",
+  "prior": {
+    "head": {
+      "containers": "",
+      "gpu_processes": "",
+      "image": "sha256:a72a4c801a6f4c092473a5fcf2b36b6f8cd8a88c3429c23fc35e5fd2c179e47d"
+    },
+    "worker": {
+      "containers": "",
+      "gpu_processes": "",
+      "image": "sha256:a72a4c801a6f4c092473a5fcf2b36b6f8cd8a88c3429c23fc35e5fd2c179e47d"
+    }
+  },
+  "cache_root": "/root/.cache/spoolcache-qualification/spoolcache-mixed-investigation-fjj531x7"
+}

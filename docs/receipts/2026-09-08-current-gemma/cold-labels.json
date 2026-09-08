@@ -1,0 +1,74 @@
+[
+  {
+    "run": "pp1",
+    "case": "image",
+    "cold_label": "CATS",
+    "cached_tokens": 0
+  },
+  {
+    "run": "pp1",
+    "case": "audio",
+    "cold_label": "MARY_HAD_A_LITTLE_LAMB",
+    "cached_tokens": 0
+  },
+  {
+    "run": "pp1",
+    "case": "video",
+    "cold_label": "ARCHERY",
+    "cached_tokens": 0
+  },
+  {
+    "run": "pp1",
+    "case": "mixed",
+    "cold_label": "OTHER",
+    "cached_tokens": 0
+  },
+  {
+    "run": "pp2-exploratory",
+    "case": "image",
+    "cold_label": "CATS",
+    "cached_tokens": 0
+  },
+  {
+    "run": "pp2-exploratory",
+    "case": "audio",
+    "cold_label": "OTHER",
+    "cached_tokens": 0
+  },
+  {
+    "run": "pp2-exploratory",
+    "case": "video",
+    "cold_label": "ARCHERY",
+    "cached_tokens": 0
+  },
+  {
+    "run": "pp2-exploratory",
+    "case": "mixed",
+    "cold_label": "DOGS_SPEECH_STREET",
+    "cached_tokens": 0
+  },
+  {
+    "run": "pp2-fixed",
+    "case": "image",
+    "cold_label": "DOGS",
+    "cached_tokens": 0
+  },
+  {
+    "run": "pp2-fixed",
+    "case": "audio",
+    "cold_label": "OTHER",
+    "cached_tokens": 0
+  },
+  {
+    "run": "pp2-fixed",
+    "case": "video",
+    "cold_label": "ARCHERY",
+    "cached_tokens": 0
+  },
+  {
+    "run": "pp2-fixed",
+    "case": "mixed",
+    "cold_label": "OTHER",
+    "cached_tokens": 0
+  }
+]

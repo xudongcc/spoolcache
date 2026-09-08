@@ -16,6 +16,8 @@ with [Compatibility](../COMPATIBILITY.md) for supported scope and
 | [GLM bounded context](2026-09-07-g3d-glm-107k-cross-restart-summary.json) | The recorded bounded run, not maximum-context completion. |
 | [Gemma PP=1](2026-09-07-gemma4-text-multimodal-cross-restart-summary.json) | Text and multimodal persistent reuse on the pinned fixture. |
 | [G4 PP=2](2026-09-07-g4-gemma4-pp2-cross-restart-summary.json) | Stage-local ownership, full-rank restore and cross-restart evidence. |
+| [Gemma mixed-output diagnosis](2026-09-08-gemma-mixed-diagnosis/README.md) | Reproducible same-span native/disk comparison and runtime reproducibility limits. |
+| [Current-code Gemma](2026-09-08-current-gemma/README.md) | Installed current-code candidate and fixed regression; includes an unresolved PP=2 mixed-output difference. |
 | [G6 release](2026-09-08-g6/README.md) | Candidate qualification, first public release and installed-artifact authentication. |
 
 Other files retain individual performance, scrub, fault and recovery results.

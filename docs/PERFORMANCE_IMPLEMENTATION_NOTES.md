@@ -17,6 +17,36 @@ An accepted persistent hit needs exact prefix identity, API usage, all-participa
 entry/span agreement, full payload authentication and a stable output oracle.
 A latency difference, HTTP 200 or an empty answer envelope is insufficient.
 
+## Current-code Gemma regression (2026-09-08)
+
+The [current candidate receipt](receipts/2026-09-08-current-gemma/README.md)
+records installed-wheel runtime/CUDA checks and short PP=1/PP=2 workloads after
+the public configuration and request-control cleanup. PP=1 restored all five
+input kinds after restart with matching cold outputs and authenticated payloads.
+
+An exploratory PP=2 mixed request returned `DOGS_SPEECH_STREET` in two independent
+cold controls and `OTHER` after restoring 2,560 tokens. Both stages restored the
+same entry and every payload authenticated. This is an unresolved output
+consistency finding; byte integrity does not establish correct model output.
+The first runner did not retain its generated prompt nonce, so that exact prompt
+cannot be replayed from its API rows alone. The maintained runner now uses fixed
+prompt text and records each request command/salt. Results from the fixed prompt
+remain separate from the initial failed prompt; no assertion was relaxed.
+
+The [follow-up diagnosis](receipts/2026-09-08-gemma-mixed-diagnosis/README.md)
+reproduces the class of failure with fully retained inputs. The 2,560-token
+boundary is inside the image's `[2308, 2574)` token interval. At that same span,
+three native GPU restores produce exactly the same generated-token probabilities
+as disk restore, while cold controls differ. The original and reproduced
+persistent prefixes have identical object descriptors/digests on both ranks.
+Preserving the encoder cache does not remove the difference. Batch invariance
+makes this particular output agree but leaves probability drift, so it is not a
+complete fix. No package cache semantics or e2e assertions were changed.
+
+Some long padded cold controls also return `OTHER` or an incorrect media label.
+Record output equivalence separately from media-recognition accuracy. This is a
+functional regression exercise, with no new throughput or TTFT improvement claim.
+
 ## Recorded performance
 
 The [2026-09-04 matched benchmark](BENCHMARK_2026-09-04.md) used one fixed

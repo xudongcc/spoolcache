@@ -1,0 +1,91 @@
+{
+  "status": "attributed-to-runtime-prefix-cache-path",
+  "model": "google/gemma-4-E2B-it",
+  "revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "vllm": "0.28.0",
+  "tp": 1,
+  "pp": 2,
+  "partition": "12,23",
+  "context_limit": 8192,
+  "eager": true,
+  "image_id": "sha256:50b0e439e80815ba05cf9d14bbe43c8711bcbe6691b9946844501658db58c309",
+  "wheel": {
+    "schema": "spoolcache-release/v1",
+    "commit": "eabe045bd4b55188846dc6fe6fa09bbebe06798c",
+    "source_date_epoch": 1788855297,
+    "wheel": "spoolcache-0.2.0rc1-py3-none-any.whl",
+    "wheel_sha256": "8867bc5be29036f4ebdee390003637124c216844270a5eb052290cb7c1bac6c9",
+    "build_requires": [
+      "setuptools==80.9.0",
+      "wheel==0.45.1"
+    ]
+  },
+  "fixture_nonce": "2640792bcfca21673e81c16d52364dda-mixed",
+  "consumer_tokens": 4149,
+  "disk_producer_tokens": 4096,
+  "native_producer_tokens": 2577,
+  "native_common_prefix_tokens": 2575,
+  "cached_tokens": 2560,
+  "image_placeholder_interval": [
+    2308,
+    2574
+  ],
+  "default": {
+    "status": "divergence-reproduced-by-native-cache",
+    "native_matches_disk_probabilities": true,
+    "cold_matches_disk_output": false,
+    "encoder_cache_retention_matches_disk": true,
+    "cold": "OTHER",
+    "disk": "DOGS_SPEECH_STREET",
+    "native": [
+      "DOGS_SPEECH_STREET",
+      "DOGS_SPEECH_STREET",
+      "DOGS_SPEECH_STREET"
+    ],
+    "native_and_disk_cached_tokens": 2560,
+    "request_count": 13,
+    "scope": "diagnostic only; the e2e cold-output assertion remains unchanged"
+  },
+  "without_connector": {
+    "cold": "OTHER",
+    "native": [
+      "DOGS_SPEECH_STREET",
+      "DOGS_SPEECH_STREET",
+      "DOGS_SPEECH_STREET"
+    ],
+    "native_matches_default_disk_probabilities": true
+  },
+  "batch_invariant": {
+    "cold": "OTHER",
+    "native": "OTHER",
+    "disk": "OTHER",
+    "native_matches_disk_probabilities": true,
+    "cold_matches_disk_probabilities": false
+  },
+  "full_native_4096": "OTHER",
+  "original_prefix_objects_identical": {
+    "rank0": 12,
+    "rank1": 3
+  },
+  "core_package_changed": false,
+  "host_tests": {
+    "passed": 292,
+    "skipped": 12,
+    "subtests": 373
+  },
+  "remaining_limit": "The exact arithmetic operator/kernel responsible has not been isolated. Default cold-vs-prefix equality is not guaranteed by these results; batch invariance did not remove probability drift.",
+  "restoration": {
+    "head": {
+      "image": "sha256:a72a4c801a6f4c092473a5fcf2b36b6f8cd8a88c3429c23fc35e5fd2c179e47d",
+      "containers": "",
+      "gpu_processes": ""
+    },
+    "worker": {
+      "image": "sha256:a72a4c801a6f4c092473a5fcf2b36b6f8cd8a88c3429c23fc35e5fd2c179e47d",
+      "containers": "",
+      "gpu_processes": ""
+    },
+    "utc_time": "2026-09-08T09:19:21.094532+00:00",
+    "persistent_roots": "retained; no deletion"
+  }
+}

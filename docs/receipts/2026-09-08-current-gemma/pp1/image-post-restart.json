@@ -1,0 +1,31 @@
+{
+  "alignment": 32,
+  "cached_tokens": 2048,
+  "completion_tokens": 2,
+  "consumer_extension_padding_bytes": 0,
+  "consumer_extension_repetitions": 0,
+  "fixture": {
+    "bytes": 173131,
+    "kind": "image",
+    "mime": "image/jpeg",
+    "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+  },
+  "oracle_label": "CATS",
+  "output": {
+    "content": "CATS",
+    "finish_reason": "stop",
+    "reasoning": null,
+    "reasoning_content": null,
+    "tool_calls": null
+  },
+  "output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+  "phase": "consumer",
+  "prompt_padding_bytes": 20,
+  "prompt_tokens": 4138,
+  "prompt_unit_repetitions": 315,
+  "request_id": "chatcmpl-a60bab0f030c5b93",
+  "skip_read": false,
+  "skip_write": false,
+  "target_span": 4096,
+  "wall_seconds": 1.02814
+}

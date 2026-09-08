@@ -1,0 +1,14 @@
+{
+  "head": {
+    "dev_image": "sha256:a72a4c801a6f4c092473a5fcf2b36b6f8cd8a88c3429c23fc35e5fd2c179e47d",
+    "running_containers": "",
+    "gpu_processes": ""
+  },
+  "worker": {
+    "dev_image": "sha256:a72a4c801a6f4c092473a5fcf2b36b6f8cd8a88c3429c23fc35e5fd2c179e47d",
+    "running_containers": "",
+    "gpu_processes": ""
+  },
+  "utc_time": "2026-09-08T08:46:52.455227+00:00",
+  "persistent_cache_roots": "retained; no deletion"
+}

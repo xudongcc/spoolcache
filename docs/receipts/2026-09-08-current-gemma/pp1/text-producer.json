@@ -1,0 +1,12 @@
+{
+  "cached_tokens": 0,
+  "completion_tokens": 8,
+  "elapsed_seconds": 0.8205379779974464,
+  "output_preview": " alpha beta gamma delta epsilon zeta eta theta",
+  "output_sha256": "1c423d0ad91e18a1598d29936d02a279e2572899604af0f29aeb01d4399ac294",
+  "prompt_source_tokens": 4128,
+  "prompt_tokens": 4096,
+  "request_id": "cmpl-be2bb88061d7e1cf",
+  "target_tokens": 4096,
+  "ttft_seconds": 0.6412714249890996
+}

@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "oracle": "repeated cold output equivalence",
+  "model": "google/gemma-4-E2B-it",
+  "revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "nonce": "843e75f0d26e4e09b9adbe7f07eeaad6",
+  "cases": [
+    "text",
+    "image",
+    "audio",
+    "video",
+    "mixed"
+  ],
+  "expected_cached_tokens": {
+    "text": 2048,
+    "image": 2048,
+    "audio": 2048,
+    "video": 2048,
+    "mixed": 2560
+  },
+  "request_controls": "passed",
+  "cross_restart": "passed"
+}

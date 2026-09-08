@@ -1,0 +1,45 @@
+{
+  "alignment": 32,
+  "cached_tokens": 0,
+  "completion_tokens": 13,
+  "consumer_extension_padding_bytes": 0,
+  "consumer_extension_repetitions": 0,
+  "fixture": [
+    {
+      "bytes": 549197,
+      "kind": "video",
+      "mime": "video/mp4",
+      "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+    },
+    {
+      "bytes": 173131,
+      "kind": "image",
+      "mime": "image/jpeg",
+      "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+    },
+    {
+      "bytes": 65449,
+      "kind": "audio",
+      "mime": "audio/ogg",
+      "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+    }
+  ],
+  "oracle_label": null,
+  "output": {
+    "content": "CATS_MARY_ARCHERY",
+    "finish_reason": "stop",
+    "reasoning": null,
+    "reasoning_content": null,
+    "tool_calls": null
+  },
+  "output_sha256": "a68325f169555a2158ea6bd3f942260a8849335d8755429318118d7794a5e307",
+  "phase": "producer",
+  "prompt_padding_bytes": 12,
+  "prompt_tokens": 4096,
+  "prompt_unit_repetitions": 90,
+  "request_id": "chatcmpl-8a0e642024c84540",
+  "skip_read": false,
+  "skip_write": false,
+  "target_span": 4096,
+  "wall_seconds": 1.725421
+}

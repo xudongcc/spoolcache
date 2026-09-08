@@ -1,0 +1,16 @@
+{
+  "status": "divergence-reproduced-by-native-cache",
+  "native_matches_disk_probabilities": true,
+  "cold_matches_disk_output": false,
+  "encoder_cache_retention_matches_disk": true,
+  "cold": "OTHER",
+  "disk": "DOGS_SPEECH_STREET",
+  "native": [
+    "DOGS_SPEECH_STREET",
+    "DOGS_SPEECH_STREET",
+    "DOGS_SPEECH_STREET"
+  ],
+  "native_and_disk_cached_tokens": 2560,
+  "request_count": 13,
+  "scope": "diagnostic only; the e2e cold-output assertion remains unchanged"
+}

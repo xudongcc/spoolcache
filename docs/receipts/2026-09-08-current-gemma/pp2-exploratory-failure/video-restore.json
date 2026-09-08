@@ -1,0 +1,31 @@
+{
+  "alignment": 32,
+  "cached_tokens": 2048,
+  "completion_tokens": 7,
+  "consumer_extension_padding_bytes": 0,
+  "consumer_extension_repetitions": 0,
+  "fixture": {
+    "bytes": 549197,
+    "kind": "video",
+    "mime": "video/mp4",
+    "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+  },
+  "oracle_label": "ARCHERY",
+  "output": {
+    "content": "ARCHERY",
+    "finish_reason": "stop",
+    "reasoning": null,
+    "reasoning_content": null,
+    "tool_calls": null
+  },
+  "output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+  "phase": "consumer",
+  "prompt_padding_bytes": 0,
+  "prompt_tokens": 4137,
+  "prompt_unit_repetitions": 145,
+  "request_id": "chatcmpl-b20490c4c11f691e",
+  "skip_read": false,
+  "skip_write": false,
+  "target_span": 4096,
+  "wall_seconds": 1.056118
+}

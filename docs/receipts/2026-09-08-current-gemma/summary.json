@@ -1,0 +1,88 @@
+{
+  "status": "qualification-has-unresolved-finding",
+  "artifact": {
+    "schema": "spoolcache-release/v1",
+    "commit": "eabe045bd4b55188846dc6fe6fa09bbebe06798c",
+    "source_date_epoch": 1788855297,
+    "wheel": "spoolcache-0.2.0rc1-py3-none-any.whl",
+    "wheel_sha256": "8867bc5be29036f4ebdee390003637124c216844270a5eb052290cb7c1bac6c9",
+    "build_requires": [
+      "setuptools==80.9.0",
+      "wheel==0.45.1"
+    ]
+  },
+  "image_id": "sha256:50b0e439e80815ba05cf9d14bbe43c8711bcbe6691b9946844501658db58c309",
+  "model": "google/gemma-4-E2B-it",
+  "revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+  "runtime": "vLLM 0.28.0",
+  "runtime_tests": {
+    "passed": 284,
+    "skipped": 1,
+    "skip": "No non-prefix scratch spec exposed by this vLLM build"
+  },
+  "host_tests": {
+    "passed": 288,
+    "skipped": 12,
+    "subtests_passed": 373
+  },
+  "pp1": {
+    "five_inputs": "cold/store/restore/restart output equivalence passed",
+    "payloads": "all authenticated",
+    "request_flags": "passed",
+    "context_limit": 16384,
+    "execution": "compiled"
+  },
+  "pp2_fixed": {
+    "status": "passed",
+    "oracle": "repeated cold output equivalence",
+    "model": "google/gemma-4-E2B-it",
+    "revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
+    "nonce": "843e75f0d26e4e09b9adbe7f07eeaad6",
+    "cases": [
+      "text",
+      "image",
+      "audio",
+      "video",
+      "mixed"
+    ],
+    "expected_cached_tokens": {
+      "text": 2048,
+      "image": 2048,
+      "audio": 2048,
+      "video": 2048,
+      "mixed": 2560
+    },
+    "request_controls": "passed",
+    "cross_restart": "passed",
+    "context_limit": 8192,
+    "execution": "eager",
+    "upstream_partition": "12,23"
+  },
+  "pp2_exploratory": {
+    "case": "mixed",
+    "cold_output": "DOGS_SPEECH_STREET",
+    "restored_output": "OTHER",
+    "cached_tokens": 2560,
+    "all_rank_payloads": "authenticated",
+    "status": "unresolved output difference"
+  },
+  "memory_sample_interval_seconds": 5,
+  "memory_minimum_bytes": {
+    "head": {
+      "MemAvailable": 9186750464,
+      "SwapFree": 16002854912
+    },
+    "worker": {
+      "MemAvailable": 76128698368,
+      "SwapFree": 17062850560
+    }
+  },
+  "package_source_hashes_still_match": true,
+  "limitations": [
+    "No new release or push",
+    "Fixed PP=2 prompt pass does not close exploratory mixed-input output failure",
+    "PP=1 used the retained temporary orchestration; the maintained fixed runner executed PP=2",
+    "Cold output equivalence is not media-recognition accuracy",
+    "No new fault injection, maximum context, or compatibility-model matrix"
+  ]
+}

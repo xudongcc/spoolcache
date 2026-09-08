@@ -49,7 +49,7 @@ mkdir -p "$CACHE_DIR"
 docker run --rm \
   --mount "type=bind,src=$CACHE_DIR,dst=/var/lib/spoolcache" \
   -e SPOOLCACHE_PATH=/var/lib/spoolcache \
-  --entrypoint python3 "$RUNTIME_IMAGE" -m spoolcache.vllm.config_json
+  --entrypoint spoolcache "$RUNTIME_IMAGE" config
 ```
 
 Use an expanded absolute path for `CACHE_DIR` in this Docker example. The

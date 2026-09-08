@@ -1,0 +1,33 @@
+{
+  "cached_tokens": 0,
+  "completion_tokens": 8,
+  "elapsed_seconds": 0.7112531839957228,
+  "output_preview": "\n\n\n\n/ / calculators \u0a38\u0a2e \u09b8\u09c2",
+  "output_sha256": "73d1c790a51f0c2df5c57da20a9597e79beecce1033bf226945fe7b0bf530665",
+  "prompt_source_tokens": 4128,
+  "prompt_tokens": 4096,
+  "request_id": "cmpl-af77fed214be0c01",
+  "target_tokens": 4096,
+  "ttft_seconds": 0.5213141159911174,
+  "nonce": "spoolcache-gemma-e2e-v1-text",
+  "cache_salt": "843e75f0d26e4e09b9adbe7f07eeaad6-flags-save",
+  "command": [
+    "/root/projects/xudongcc/spoolcache/.venv/bin/python",
+    "/root/projects/xudongcc/spoolcache/benchmarks/bench_prefix_e2e.py",
+    "--api",
+    "http://127.0.0.1:8000",
+    "--model",
+    "google/gemma-4-E2B-it",
+    "--nonce",
+    "spoolcache-gemma-e2e-v1-text",
+    "--cache-salt",
+    "843e75f0d26e4e09b9adbe7f07eeaad6-flags-save",
+    "--prompt-source-tokens",
+    "4128",
+    "--target-tokens",
+    "4096",
+    "--max-tokens",
+    "8",
+    "--skip-read"
+  ]
+}

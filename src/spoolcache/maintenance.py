@@ -1774,8 +1774,14 @@ def read_scrub_status(root: str | os.PathLike[str]) -> Mapping[str, Any]:
 
 
 def main(argv: Iterable[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description="SpoolCache configuration and cache maintenance tools."
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser(
+        "config",
+        help="print validated vLLM connector JSON from environment settings",
+    )
     request_parser = subparsers.add_parser(
         "request",
         help="request a resumable authenticated scrub of one entry",
@@ -1788,6 +1794,14 @@ def main(argv: Iterable[str] | None = None) -> int:
     )
     status_parser.add_argument("--root", required=True)
     arguments = parser.parse_args(tuple(argv) if argv is not None else None)
+    if arguments.command == "config":
+        from .vllm.config_json import main as render_config
+
+        try:
+            render_config()
+        except ValueError as error:
+            parser.error(str(error))
+        return 0
     if arguments.command == "request":
         nonce = request_deep_scrub(arguments.root, arguments.entry)
         print(json.dumps({"schema": SCRUB_REQUEST_SCHEMA, "nonce": nonce}))
