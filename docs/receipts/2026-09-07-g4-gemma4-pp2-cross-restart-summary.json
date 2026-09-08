@@ -1,0 +1,200 @@
+{
+  "schema": "spoolcache-live-qualification/v1",
+  "observed_at": "2026-09-07T18:22:53Z",
+  "scope": "two-dgx-spark-tp1-pp2-functional-cross-process-restore",
+  "coordination": "spoolcache-coordination/v1",
+  "access_mode": "read-write",
+  "source": {
+    "parent_commit": "5dc7f61a2c9e4a379f7ac0ade79cb0f145d5f7d7",
+    "exact_snapshot_files": 150,
+    "exact_snapshot_sha256": "eb2557b3a18e7ffc658d528d9485286225956fdfb044f86b2d32a9455763e4ed"
+  },
+  "model": {
+    "locator": "google/gemma-4-E2B-it",
+    "revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7"
+  },
+  "runtime": {
+    "vllm_version": "0.28.0",
+    "official_image": "vllm/vllm-openai:v0.28.0@sha256:61fc8a896b0a4fbbbdc063bc4b0dbc25ce98e02b5050c24aeb7830ac02039b14",
+    "development_image_id": "sha256:da350b96a30ef010b91265475d530bf61112d39529d2f14c5600ba447400b6e4",
+    "enabled_multimodal_inputs": [
+      "audio",
+      "image",
+      "video"
+    ],
+    "pipeline_partition": [
+      12,
+      23
+    ],
+    "pipeline_partition_scope": "qualification-only upstream vLLM setting; not SpoolCache runtime logic"
+  },
+  "topology": {
+    "tp": 1,
+    "pp": 2,
+    "dcp": 1,
+    "required_global_ranks": [
+      0,
+      1
+    ],
+    "topology_digest": "740cb6c328aad40ce0c7066f77cc68c426c2914e2b415aaf6552fd8050569627",
+    "coordination_ready": true,
+    "rank_identity_ready": true,
+    "inventory_quorum_ready": true,
+    "fatal_clear": true
+  },
+  "network": {
+    "head": "10.100.216.1",
+    "worker": "10.100.216.2",
+    "transport": "NCCL NET/IB",
+    "rails": [
+      "rocep1s0f1",
+      "roceP2p1s0f1"
+    ]
+  },
+  "rank_manifests": [
+    {
+      "global_rank": 0,
+      "pp_rank": 0,
+      "tp_rank": 0,
+      "dcp_rank": 0,
+      "deployment_identity_digest": "e4f1c87ad72358442a3baa96b8622acd0850bd680cb6998c978229ae9ce4a798",
+      "rank_identity_digest": "4f55fc65bdf4c075a8ad3c45d15e16940318f0f0f4823bc51d5e9828d8828002",
+      "layout_digest": "43c302e9dcf113977368b232e51fb521fae73c70beb9019b88ddc698fec165f4",
+      "group_owned_layers": [
+        3,
+        3,
+        2,
+        2,
+        2
+      ],
+      "owned_layers": 12,
+      "objects_per_entry": 12,
+      "direct_io": true
+    },
+    {
+      "global_rank": 1,
+      "pp_rank": 1,
+      "tp_rank": 0,
+      "dcp_rank": 0,
+      "deployment_identity_digest": "b6b4fe94bbd820c0b946040e452d0d3da72483deb01d101c74f136924d164f10",
+      "rank_identity_digest": "88bc2a0046702ead0c3c802c6b57747ac5a45b616cf6b1122dd097c720950149",
+      "layout_digest": "256ea6a7081412de4aacaa862d4dc5f995a40e5a0716c0e17d3979a3dd904b68",
+      "group_owned_layers": [
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "owned_layers": 3,
+      "objects_per_entry": 3,
+      "direct_io": true
+    }
+  ],
+  "runtime_proven_shared_aliases": 20,
+  "cache_reset": {
+    "prefix": true,
+    "encoder": true,
+    "multimodal": true,
+    "reset_running_requests": false,
+    "reset_external": false
+  },
+  "process_restart": {
+    "head_engine_pid_before": 1199947,
+    "head_engine_pid_after": 1225913,
+    "worker_engine_pid_before": 3686371,
+    "worker_engine_pid_after": 3688391,
+    "entries_discovered_per_rank_after_restart": 6,
+    "api_healthy_after_restart": true
+  },
+  "cases": [
+    {
+      "kind": "text",
+      "entry_id": "6c2e07744af6e0934422fbce8b4a1bb4f60e0576e4e7730011ad6d80fd4b0802",
+      "producer_prompt_tokens": 4096,
+      "consumer_prompt_tokens": 4128,
+      "bypass_cached_tokens": 0,
+      "restored_tokens": 2048,
+      "post_restart_restored_tokens": 2048,
+      "bypass_output_sha256": "2e28226806679bf8aaa59b0eff6db5a5a91ba3d5fe39ac4b89ea0aa66edf588e",
+      "restore_output_sha256": "2e28226806679bf8aaa59b0eff6db5a5a91ba3d5fe39ac4b89ea0aa66edf588e",
+      "payload_status": "all-payloads-authenticated"
+    },
+    {
+      "kind": "image",
+      "entry_id": "35dc738dca256d797bd8953d97bf029d8946912b13dd5a412a6d9c86fedd357c",
+      "producer_prompt_tokens": 4096,
+      "consumer_prompt_tokens": 4160,
+      "bypass_cached_tokens": 0,
+      "restored_tokens": 2048,
+      "post_restart_restored_tokens": 2048,
+      "oracle": "CATS",
+      "bypass_output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+      "restore_output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+      "payload_status": "all-payloads-authenticated"
+    },
+    {
+      "kind": "audio",
+      "entry_id": "721af4f9d166de60c886b2c7afac2c7c3577a985cd0329d048f41b2ef0b7fa6c",
+      "producer_prompt_tokens": 4096,
+      "consumer_prompt_tokens": 4160,
+      "bypass_cached_tokens": 0,
+      "restored_tokens": 2048,
+      "post_restart_restored_tokens": 2048,
+      "oracle": "MARY_HAD_A_LITTLE_LAMB",
+      "bypass_output_sha256": "f58effbcb9b1dd8008724ac940fb853b8962ab7ee9f016a963402f2e089c1f60",
+      "restore_output_sha256": "f58effbcb9b1dd8008724ac940fb853b8962ab7ee9f016a963402f2e089c1f60",
+      "payload_status": "all-payloads-authenticated"
+    },
+    {
+      "kind": "video",
+      "entry_id": "b25b031ba972bf88b7bf84104eadf5baa6f0a10af19dd6d2a943ac0a868dfb0a",
+      "producer_prompt_tokens": 4096,
+      "consumer_prompt_tokens": 4160,
+      "bypass_cached_tokens": 0,
+      "restored_tokens": 2048,
+      "post_restart_restored_tokens": 2048,
+      "oracle": "ARCHERY",
+      "bypass_output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+      "restore_output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+      "payload_status": "all-payloads-authenticated"
+    },
+    {
+      "kind": "video+image+audio",
+      "entry_id": "046f68ef531bc7bee15227886c8a9ef12dbe4831b7db6a3bae16215bdd94f847",
+      "producer_prompt_tokens": 4096,
+      "consumer_prompt_tokens": 4165,
+      "bypass_cached_tokens": 0,
+      "restored_tokens": 2560,
+      "post_restart_restored_tokens": 2560,
+      "oracle": "CATS_MARY_ARCHERY",
+      "bypass_output_sha256": "a68325f169555a2158ea6bd3f942260a8849335d8755429318118d7794a5e307",
+      "restore_output_sha256": "a68325f169555a2158ea6bd3f942260a8849335d8755429318118d7794a5e307",
+      "payload_status": "all-payloads-authenticated"
+    }
+  ],
+  "payload_authentication": {
+    "qualified_entries": 5,
+    "qualified_manifest_objects": 75,
+    "whole_namespace_entries": 6,
+    "whole_namespace_manifest_objects": 90,
+    "rank0": "all-payloads-authenticated",
+    "rank1": "all-payloads-authenticated"
+  },
+  "compatibility_regression": {
+    "host": "249 passed / 12 skipped / 256 subtests passed",
+    "official_vllm_0_28_cuda": "256 tests / 1 skipped / OK",
+    "deepseek": "256 tests / 6 skipped / OK",
+    "qwen": "256 tests / 5 skipped / OK",
+    "glm": "256 tests / 5 skipped / OK",
+    "mia_launcher_contracts": "3 passed per repository"
+  },
+  "qualification_notes": [
+    "The default 18/17 vLLM partition failed before SpoolCache initialization because an upstream shared-KV owner crossed stages.",
+    "A 13/22 partition started but failed semantic output oracles even with SpoolCache explicitly bypassed.",
+    "The 12/23 partition matched the independent PP=1 CATS, BLUE, and arithmetic baseline before persistent-cache qualification.",
+    "One earlier mixed-media prompt order pushed relevant content outside the model sliding window; its self-consistent cache entry remains in the authenticated namespace but is excluded from the five qualification cases.",
+    "No model name, layer table, partition, modality allowlist, or deployment-specific mapping was added to SpoolCache production code."
+  ],
+  "result": "passed"
+}

@@ -1,0 +1,94 @@
+{
+  "access_mode": "read-write",
+  "cold_controls": {
+    "131072": {
+      "cached_tokens": 0,
+      "min_head_mem_available_kib": 12604832,
+      "min_head_swap_free_kib": 7942008,
+      "min_worker_mem_available_kib": 16472764,
+      "min_worker_swap_free_kib": 14653740,
+      "output_sha256": "25204c72194ae2527aa39936812eb799b518a6b531e0836d00db317b6e18c8b6",
+      "samples": 65,
+      "ttft_seconds": 185.2844585069979
+    },
+    "196608": {
+      "cached_tokens": 0,
+      "min_head_mem_available_kib": 4091724,
+      "min_head_swap_free_kib": 7499768,
+      "min_worker_mem_available_kib": 10997164,
+      "min_worker_swap_free_kib": 14655720,
+      "output_sha256": "2f43521c4cb3c84362542f89a6b68ce1b874a4ef473a268b45deb54a942c4993",
+      "samples": 109,
+      "ttft_seconds": 310.02434432800146
+    }
+  },
+  "coordination": "spoolcache-coordination/v1",
+  "entry": {
+    "content_index_sha256_both_ranks": "914986fad4b1c8a8a44e0346f0687da1c04e5df570dd3afb9463f8e04c9755dc",
+    "entry_id": "588b599e004da058e4f78d381cc0ebcb5c451fa660c324de61cf95b1f6610785",
+    "groups": 5,
+    "layers": 170,
+    "logical_bytes_per_rank": 520782592,
+    "objects_per_rank": 170,
+    "payload_rank0": "all-payloads-authenticated",
+    "payload_rank1": "all-payloads-authenticated",
+    "span_tokens": 130048,
+    "stored_bytes_per_rank": 521150464
+  },
+  "health": {
+    "api_live": true,
+    "fatal_clear": true,
+    "inventory_quorum_ready": true,
+    "live_ranks": 2,
+    "rank_identity_ready": true,
+    "ready": true,
+    "required_ranks": 2,
+    "supervisor_phase": "ready"
+  },
+  "qualification": {
+    "highest_cold_qualified_request_tokens": 196608,
+    "max_model_len_for_isolated_qualification": 524288,
+    "next_larger_cold_request_attempted": false,
+    "reason_stopped": "196608 cold left only 945996 KiB above the fixed 3 GiB MemAvailable guard on the head",
+    "runtime_gpu_memory_utilization": 0.75
+  },
+  "restore_after_full_tp_restart": {
+    "cached_tokens": 130048,
+    "completion_tokens": 8,
+    "elapsed_seconds": 126.05871243699949,
+    "min_head_mem_available_kib": 11291836,
+    "min_head_swap_free_kib": 11607580,
+    "min_worker_mem_available_kib": 15549576,
+    "min_worker_swap_free_kib": 14569884,
+    "output_matches_cold_control": true,
+    "output_sha256": "2f43521c4cb3c84362542f89a6b68ce1b874a4ef473a268b45deb54a942c4993",
+    "prompt_source_tokens": 196608,
+    "prompt_tokens": 196608,
+    "readiness_failures": 0,
+    "request_id": "cmpl-a8b94d94d1673ed1",
+    "samples": 55,
+    "ttft_seconds": 126.05672455100284
+  },
+  "runtime": "deepseek-v4-flash-vision",
+  "runtime_declared_modalities": ["image"],
+  "schema": "spoolcache-live-qualification/v1",
+  "steady_metrics": {
+    "hit_tokens": 130048,
+    "post_admission_failures": 0,
+    "quarantined_entries": 0,
+    "rank_quorum_entries": 7,
+    "restore_bytes": 1041565184,
+    "restore_count": 2,
+    "scrub_failures": 0,
+    "scrub_shutdown_failures": 0,
+    "store_errors": 0,
+    "telemetry_dropped": 0
+  },
+  "watchdog": {
+    "interval_seconds": 2,
+    "mem_available_floor_kib": 3145728,
+    "required_checks": ["head memory/swap", "worker memory/swap", "SSH", "API", "two-rank readiness"],
+    "swap_free_floor_kib": 4194304
+  },
+  "result": "passed"
+}

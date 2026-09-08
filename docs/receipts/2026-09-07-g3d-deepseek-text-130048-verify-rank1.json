@@ -1,0 +1,20 @@
+{
+  "content_index_sha256": "914986fad4b1c8a8a44e0346f0687da1c04e5df570dd3afb9463f8e04c9755dc",
+  "deployment_identity_digest": "35939a8c3debd9c4e481d8f338e5246c46c179d6099ecf736f47365f8a6dd2a2",
+  "entry_id": "588b599e004da058e4f78d381cc0ebcb5c451fa660c324de61cf95b1f6610785",
+  "group_layers": {"0": 62, "1": 23, "2": 23, "3": 42, "4": 20},
+  "group_pages": {"0": 508, "1": 2, "2": 2, "3": 2, "4": 16},
+  "groups": 5,
+  "layers": 170,
+  "layout_digest": "72c18d226cc6feadfe1d07a524af627848ea5a50f060b05ddc97267ffe52672a",
+  "logical_bytes": 520782592,
+  "manifest_payload_sha256": "cd20f79fc323bc93295d34aaa5260cb42f8061554ba608751a02ce29d1cdd520",
+  "objects": 170,
+  "physical_rank": 1,
+  "profile": "vllm-runtime-kv-v1",
+  "rank_identity_digest": "fd3030a047f1e7cdb8bbcfcf91d2afc0d998ef9eedb01965d6b2e13d91f3cf60",
+  "span_tokens": 130048,
+  "status": "all-payloads-authenticated",
+  "stored_bytes": 521150464,
+  "topology_digest": "748cd94a00db81944cadb80b8dd27eff5e51bd76036299762161e1570f225dbe"
+}

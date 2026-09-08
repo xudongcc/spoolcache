@@ -1,0 +1,88 @@
+{
+  "coordination": "spoolcache-coordination/v1",
+  "gmu": 0.75,
+  "health": {
+    "api_live": true,
+    "fatal_clear": true,
+    "inventory_quorum_ready": true,
+    "live_ranks": 2,
+    "rank_identity_ready": true,
+    "ready": true,
+    "required_ranks": 2,
+    "supervisor_phase": "ready"
+  },
+  "max_consumer_matrix_before_restart": {
+    "image": {
+      "bypass_request_id": "chatcmpl-9f2eb38d125337ff",
+      "bypass_wall_seconds": 109.479486,
+      "cached_tokens": 160000,
+      "output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+      "prompt_tokens": 260800,
+      "restore_request_id": "chatcmpl-b70e9bf4489f212b",
+      "restore_wall_seconds": 49.613216
+    },
+    "text": {
+      "bypass_request_id": "cmpl-be1b089ec8b979a1",
+      "bypass_ttft_seconds": 109.30302067999946,
+      "cached_tokens": 160000,
+      "output_sha256": "9b2fab355d67353084be1a5efb007737c4d68b773b5f880c7a46c4075dbb8765",
+      "prompt_tokens": 260800,
+      "restore_request_id": "cmpl-80062c05350f6bbc",
+      "restore_ttft_seconds": 49.11664436200044
+    },
+    "video": {
+      "bypass_request_id": "chatcmpl-96018293d147df2e",
+      "bypass_wall_seconds": 109.387216,
+      "cached_tokens": 160000,
+      "output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+      "prompt_tokens": 260800,
+      "restore_request_id": "chatcmpl-a4152cc7659d160b",
+      "restore_wall_seconds": 50.094101
+    }
+  },
+  "payload_authentication_after_restart": {
+    "image_rank0": "all-payloads-authenticated",
+    "image_rank1": "all-payloads-authenticated",
+    "logical_bytes_per_entry_per_rank": 2324992000,
+    "objects_per_entry_per_rank": 102,
+    "video_rank0": "all-payloads-authenticated",
+    "video_rank1": "all-payloads-authenticated"
+  },
+  "post_admission_failures": 0,
+  "post_restart_restore": {
+    "image": {
+      "cached_tokens": 160000,
+      "entry_id": "9bf71302118177e8c2ea2593b83ab43d273465194f3d98a876a7060b3440db1d",
+      "oracle_label": "CATS",
+      "output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+      "prompt_tokens": 160055,
+      "rank0_restore": true,
+      "rank1_restore": true,
+      "request_id": "chatcmpl-8fd34418d304b74a",
+      "wall_seconds": 3.502285
+    },
+    "restore_bytes_total": 9299968000,
+    "restore_count": 4,
+    "video": {
+      "cached_tokens": 160000,
+      "entry_id": "4fe4472d7ff632bcad22e26fad7f1ed5d18e2413935550f52aa88a19e3fe2268",
+      "oracle_label": "ARCHERY",
+      "output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+      "prompt_tokens": 160055,
+      "rank0_restore": true,
+      "rank1_restore": true,
+      "request_id": "chatcmpl-96c9a1d40e9dfe5a",
+      "wall_seconds": 1.89203
+    }
+  },
+  "result": "passed",
+  "runtime": "qwen3.8-flash-next-tp2-ep-mtp3",
+  "schema": "spoolcache-live-qualification/v1",
+  "startup_after_full_tp_restart": {
+    "report_barrier_cached_tokens": 0,
+    "report_barrier_request_id": "cmpl-af5cdebc4c3e9d4f",
+    "scheduler_quorum_entries_after_barrier": 3,
+    "worker_rank0_entries": 3,
+    "worker_rank1_entries": 3
+  }
+}

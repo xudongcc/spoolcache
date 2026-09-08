@@ -1,0 +1,11 @@
+{
+  "schema": "spoolcache-release/v1",
+  "commit": "93e7ad49089e2b191eed1962b991fdad3653ce7d",
+  "source_date_epoch": 1788830793,
+  "wheel": "spoolcache-0.1.0-py3-none-any.whl",
+  "wheel_sha256": "9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b",
+  "build_requires": [
+    "setuptools==80.9.0",
+    "wheel==0.45.1"
+  ]
+}

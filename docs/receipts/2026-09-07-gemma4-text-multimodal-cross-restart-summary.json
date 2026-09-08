@@ -1,0 +1,152 @@
+{
+  "schema": "spoolcache-live-qualification/v1",
+  "observed_at": "2026-09-07T15:44:36Z",
+  "scope": "local-dgx-spark-tp1-pp1-functional-cross-process-restore",
+  "coordination": "spoolcache-coordination/v1",
+  "access_mode": "read-write",
+  "model": {
+    "locator": "google/gemma-4-E2B-it",
+    "revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7"
+  },
+  "runtime": {
+    "vllm_version": "0.28.0",
+    "vllm_build_sha256_prefix": "6b8a22ed400d",
+    "official_image": "vllm/vllm-openai:v0.28.0@sha256:61fc8a896b0a4fbbbdc063bc4b0dbc25ce98e02b5050c24aeb7830ac02039b14",
+    "development_image_id": "sha256:da350b96a30ef010b91265475d530bf61112d39529d2f14c5600ba447400b6e4",
+    "audio_packages": {
+      "av": "18.1.0",
+      "scipy": "1.18.1",
+      "soundfile": "0.14.0",
+      "soxr": "1.1.0"
+    },
+    "nccl_preserved_from_official_image": "2.30.7",
+    "enabled_multimodal_inputs": [
+      "audio",
+      "image",
+      "video"
+    ]
+  },
+  "layout": {
+    "profile": "vllm-runtime-kv-v1",
+    "groups": 5,
+    "group_policies": [
+      "sliding",
+      "sliding",
+      "sliding",
+      "sliding",
+      "full"
+    ],
+    "group_owned_layers": 15,
+    "alignment_tokens": 32,
+    "runtime_proven_shared_aliases": 20,
+    "shared_alias_digest_prefix": "cf276f024859",
+    "deployment_identity_digest": "83d52d34c87e12ea623cf279fd767d26340e428e364bc4867ae85cd99ff19350",
+    "rank_identity_digest": "c9eb28134cf529159099761d9db7433279c5c1152a5481eefbee3774b0a159a8",
+    "topology_digest": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+    "layout_digest": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d"
+  },
+  "fixtures": {
+    "image": {
+      "source": "http://images.cocodataset.org/val2017/000000039769.jpg",
+      "terms": "https://cocodataset.org/#termsofuse",
+      "bytes": 173131,
+      "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+    },
+    "audio": {
+      "source": "https://vllm-public-assets.s3.us-west-2.amazonaws.com/multimodal_asset/mary_had_lamb.ogg",
+      "redistribution": "verify the public asset's own rights before redistribution",
+      "bytes": 65449,
+      "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+    },
+    "video": {
+      "source": "https://dl.fbaipublicfiles.com/pytorchvideo/projects/archery.mp4",
+      "redistribution": "verify the asset's own rights before redistribution",
+      "bytes": 549197,
+      "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+    }
+  },
+  "cache_reset": {
+    "prefix": true,
+    "encoder": true,
+    "multimodal": true,
+    "reset_running_requests": false,
+    "reset_external": false
+  },
+  "process_restart": {
+    "producer_engine_pid": 250,
+    "consumer_engine_pid": 165,
+    "entries_discovered_after_restart": 5,
+    "api_healthy_after_restart": true
+  },
+  "cases": [
+    {
+      "kind": "text",
+      "entry_id": "a73e289465821ba52c49a977da8f6cd3658222a36665ef25a24901569d7c8132",
+      "producer_prompt_tokens": 4096,
+      "consumer_prompt_tokens": 4128,
+      "bypass_cached_tokens": 0,
+      "restored_tokens": 2048,
+      "bypass_output_sha256": "84e527be21a47227ac003589ef02c90a5fada9e27a21491e5bdb77275705a249",
+      "restore_output_sha256": "84e527be21a47227ac003589ef02c90a5fada9e27a21491e5bdb77275705a249",
+      "content_index_sha256": "c1195565f2f5b82c910e96b325adc5e0ba4904cd5115a77dd0c06f741bdf657c",
+      "payload_status": "all-payloads-authenticated"
+    },
+    {
+      "kind": "image",
+      "entry_id": "5a30e8979f4d305a40fca2ad2ab5c23c5d76b9a0347009f7aa28f446f49272a9",
+      "producer_prompt_tokens": 4096,
+      "consumer_prompt_tokens": 4140,
+      "bypass_cached_tokens": 0,
+      "restored_tokens": 2048,
+      "oracle": "CATS",
+      "bypass_output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+      "restore_output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+      "content_index_sha256": "b0eb212b28beebae05d243665c677475390e3a5f456ee614e39566ffe1ad6f55",
+      "payload_status": "all-payloads-authenticated"
+    },
+    {
+      "kind": "audio",
+      "entry_id": "0e2bd54c1bd9b1119ceafd2e4100d6d17893a774af3173d93e85a1aa6e5ed1a7",
+      "producer_prompt_tokens": 4096,
+      "consumer_prompt_tokens": 4154,
+      "bypass_cached_tokens": 0,
+      "restored_tokens": 2048,
+      "oracle": "MARY_HAD_A_LITTLE_LAMB",
+      "bypass_output_sha256": "f58effbcb9b1dd8008724ac940fb853b8962ab7ee9f016a963402f2e089c1f60",
+      "restore_output_sha256": "f58effbcb9b1dd8008724ac940fb853b8962ab7ee9f016a963402f2e089c1f60",
+      "content_index_sha256": "cdc217386c67378735b8ee9ac2b1b031487cdfa73018f58bb343b4007f272b8e",
+      "payload_status": "all-payloads-authenticated"
+    },
+    {
+      "kind": "video",
+      "entry_id": "726aff999dc408e8ab2f7fb008385189f198edaf8da6c34106c80606e89cb4dc",
+      "producer_prompt_tokens": 4096,
+      "consumer_prompt_tokens": 4141,
+      "bypass_cached_tokens": 0,
+      "restored_tokens": 2048,
+      "oracle": "ARCHERY",
+      "bypass_output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+      "restore_output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+      "content_index_sha256": "eefa6735398d5d53c0dfab9474038e67fb498275676f421155c424acb27aa9f6",
+      "payload_status": "all-payloads-authenticated"
+    },
+    {
+      "kind": "image+audio+video",
+      "entry_id": "941178983e717b364448c0613f67290575059be4dd0a4646e1227c7f83a3813a",
+      "producer_prompt_tokens": 4096,
+      "consumer_prompt_tokens": 4154,
+      "bypass_cached_tokens": 0,
+      "restored_tokens": 2560,
+      "oracle": "CATS_MARY_ARCHERY",
+      "bypass_output_sha256": "a68325f169555a2158ea6bd3f942260a8849335d8755429318118d7794a5e307",
+      "restore_output_sha256": "a68325f169555a2158ea6bd3f942260a8849335d8755429318118d7794a5e307",
+      "content_index_sha256": "f6edc678dc6c397a453c8670821448786773156abe120f856bdcf7e155c767a0",
+      "payload_status": "all-payloads-authenticated"
+    }
+  ],
+  "limitations": [
+    "This is a single-node TP=1/PP=1 functional receipt, not G4 PP=2 or multi-node qualification.",
+    "SpoolCache persisted language-model KV pages; vLLM's processor and encoder caches were explicitly cleared and are not persisted by SpoolCache.",
+    "The EngineDeadError at the explicit restart timestamp was vLLM's shutdown artifact after SIGTERM; the restarted process was healthy and produced every post-restart receipt."
+  ]
+}

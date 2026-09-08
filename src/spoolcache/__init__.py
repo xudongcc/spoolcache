@@ -1,0 +1,37 @@
+"""SpoolCache persistent KV cache primitives."""
+
+from .config import AccessMode, DirectIOMode, SpoolCacheConfig
+from .hma import (
+    HMALayout,
+    build_hma_layout,
+)
+from .identity import DeploymentIdentity, RankIdentity
+from .manifest import ObjectDescriptor, RankManifest
+from .prefix import (
+    MultimodalFeatureIdentity,
+    PrefixDigest,
+    aligned_prefix_span,
+    prefix_digests,
+    validate_multimodal_features,
+)
+from .store import ManifestStore
+
+__all__ = [
+    "AccessMode",
+    "DeploymentIdentity",
+    "DirectIOMode",
+    "HMALayout",
+    "ManifestStore",
+    "ObjectDescriptor",
+    "PrefixDigest",
+    "MultimodalFeatureIdentity",
+    "RankIdentity",
+    "RankManifest",
+    "SpoolCacheConfig",
+    "aligned_prefix_span",
+    "build_hma_layout",
+    "prefix_digests",
+    "validate_multimodal_features",
+]
+
+__version__ = "0.1.0"

@@ -1,0 +1,110 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/validate.yml
+
+  release:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      released: ${{ steps.version.outputs.released }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Reject a stale workflow before changing versions
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Install release tools
+        run: python -m pip install python-semantic-release==10.6.2 uv==0.12.2 twine==6.2.0
+      - name: Calculate version, update changelog and lock, commit and tag locally
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          semantic-release version --no-push --no-vcs-release
+      - name: Build reproducible wheel from the release commit
+        if: steps.version.outputs.released == 'true'
+        run: |
+          python scripts/build-release.py --output dist/release
+          python scripts/build-release.py --output dist/rebuild
+          cmp dist/release/*.whl dist/rebuild/*.whl
+          python -m twine check --strict dist/release/*.whl
+      - name: Test the actual wheel in a fresh environment
+        if: steps.version.outputs.released == 'true'
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-test"
+          "$RUNNER_TEMP/wheel-test/bin/python" -m pip install dist/release/*.whl pytest
+          WHEEL_SHA=$(python -c 'import json; print(json.load(open("dist/release/release.json"))["wheel_sha256"])')
+          "$RUNNER_TEMP/wheel-test/bin/python" benchmarks/verify_release_install.py --wheel dist/release/*.whl --sha256 "$WHEEL_SHA"
+          "$RUNNER_TEMP/wheel-test/bin/python" -m unittest discover -s tests -v
+          "$RUNNER_TEMP/wheel-test/bin/spoolcache-maintenance" --help
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: steps.version.outputs.released == 'true'
+        with:
+          name: release-${{ steps.version.outputs.tag }}
+          path: dist/release/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Push release commit and tag atomically, publish GitHub assets
+        if: steps.version.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git push --atomic origin HEAD:refs/heads/main "refs/tags/$RELEASE_TAG"
+          semantic-release changelog --post-to-release-tag "$RELEASE_TAG"
+          semantic-release publish --tag "$RELEASE_TAG"
+
+  pypi:
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/spoolcache/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-${{ needs.release.outputs.tag }}
+          path: release-artifact/
+      - name: Authenticate and stage the original wheel only
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib, shutil
+          root = pathlib.Path('release-artifact')
+          receipt = json.loads((root / 'release.json').read_text())
+          wheels = list(root.glob('*.whl'))
+          assert len(wheels) == 1 and wheels[0].name == receipt['wheel']
+          assert hashlib.sha256(wheels[0].read_bytes()).hexdigest() == receipt['wheel_sha256']
+          pathlib.Path('dist').mkdir()
+          shutil.copy2(wheels[0], 'dist')
+          PY
+      - name: Publish to PyPI using Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1

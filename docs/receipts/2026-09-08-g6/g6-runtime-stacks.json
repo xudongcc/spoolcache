@@ -1,0 +1,98 @@
+[
+  {
+    "target": "deepseek",
+    "base": {
+      "vllm": "0.25.2.dev0+g752a3a504.d20260714",
+      "torch": "2.11.0+cu130",
+      "cuda": "13.0",
+      "nccl": [
+        2,
+        28,
+        9
+      ]
+    },
+    "release": {
+      "vllm": "0.25.2.dev0+g752a3a504.d20260714",
+      "torch": "2.11.0+cu130",
+      "cuda": "13.0",
+      "nccl": [
+        2,
+        28,
+        9
+      ]
+    },
+    "unchanged": true
+  },
+  {
+    "target": "qwen",
+    "base": {
+      "vllm": "0.1.dev20073+g8e685d198",
+      "torch": "2.13.0+cu130",
+      "cuda": "13.0",
+      "nccl": [
+        2,
+        29,
+        7
+      ]
+    },
+    "release": {
+      "vllm": "0.1.dev20073+g8e685d198",
+      "torch": "2.13.0+cu130",
+      "cuda": "13.0",
+      "nccl": [
+        2,
+        29,
+        7
+      ]
+    },
+    "unchanged": true
+  },
+  {
+    "target": "glm",
+    "base": {
+      "vllm": "0.1.dev20051+g487ecf187",
+      "torch": "2.13.0+cu130",
+      "cuda": "13.0",
+      "nccl": [
+        2,
+        29,
+        7
+      ]
+    },
+    "release": {
+      "vllm": "0.1.dev20051+g487ecf187",
+      "torch": "2.13.0+cu130",
+      "cuda": "13.0",
+      "nccl": [
+        2,
+        29,
+        7
+      ]
+    },
+    "unchanged": true
+  },
+  {
+    "target": "official",
+    "base": {
+      "vllm": "0.28.0",
+      "torch": "2.13.0+cu130",
+      "cuda": "13.0",
+      "nccl": [
+        2,
+        29,
+        7
+      ]
+    },
+    "release": {
+      "vllm": "0.28.0",
+      "torch": "2.13.0+cu130",
+      "cuda": "13.0",
+      "nccl": [
+        2,
+        29,
+        7
+      ]
+    },
+    "unchanged": true
+  }
+]

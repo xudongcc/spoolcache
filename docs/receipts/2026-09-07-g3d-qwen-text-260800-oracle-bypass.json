@@ -1,0 +1,18 @@
+{
+  "aborted": false,
+  "cache_salt": "g3d-qwen-v4-restore",
+  "cached_tokens": 0,
+  "elapsed_seconds": 109.33602010600043,
+  "gmu": 0.75,
+  "max_model_len": 262144,
+  "nonce": "g3d-qwen-v4-running-page",
+  "output_preview": " theta iota kappa. alpha beta gamma delta",
+  "output_sha256": "9b2fab355d67353084be1a5efb007737c4d68b773b5f880c7a46c4075dbb8765",
+  "prompt_tokens": 260800,
+  "request_id": "cmpl-be1b089ec8b979a1",
+  "runtime": "qwen3.8-flash-next-tp2-ep-mtp3",
+  "schema": "spoolcache-live-qualification/v1",
+  "spoolcache_bypass": true,
+  "target_tokens": 260800,
+  "ttft_seconds": 109.30302067999946
+}

@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools==80.9.0", "wheel==0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spoolcache"
+version = "0.1.0"
+description = "Patch-free, bounded-memory, rank-local NVMe KV cache for vLLM"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "MiaAI Lab"}]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+
+[project.urls]
+Homepage = "https://github.com/xudongcc/spoolcache"
+Repository = "https://github.com/xudongcc/spoolcache.git"
+Documentation = "https://github.com/xudongcc/spoolcache/blob/main/docs/SPOOLCACHE_DESIGN.md"
+Issues = "https://github.com/xudongcc/spoolcache/issues"
+
+[project.scripts]
+spoolcache-maintenance = "spoolcache.maintenance:main"
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[dependency-groups]
+# Host-side development remains lightweight.  The real CUDA/vLLM dependency
+# is pinned by Dockerfile because its wheel and CUDA ABI are platform-coupled.
+dev = [
+  "huggingface-hub>=1,<2",
+  "pytest>=8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+version_variables = ["src/spoolcache/__init__.py:__version__"]
+tag_format = "v{version}"
+allow_zero_version = true
+major_on_zero = false
+commit_message = "chore(release): {version} [skip ci]"
+# PSR stamps versions before this hook and commits afterwards. Build the wheel
+# from that clean release commit in CI, so its provenance is the tagged commit.
+build_command = """
+set -eu
+uv lock --upgrade-package spoolcache
+git add uv.lock
+"""
+
+[tool.semantic_release.branches.main]
+match = "^main$"
+prerelease = false
+
+[tool.semantic_release.changelog]
+mode = "update"
+
+[tool.semantic_release.publish]
+dist_glob_patterns = ["dist/release/*.whl", "dist/release/release.json"]

@@ -1,0 +1,38 @@
+{
+  "alignment": 1600,
+  "bypass_spoolcache": false,
+  "cached_tokens": 0,
+  "fixture": {
+    "bytes": 173131,
+    "kind": "image",
+    "mime": "image/jpeg",
+    "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+  },
+  "gmu": 0.75,
+  "health_after_request": "api live; ranks 2/2; supervisor ready; inventory quorum ready; rank identity ready; fatal clear",
+  "memory_guard": {
+    "minimum_mem_available_kib": 3145728,
+    "minimum_swap_free_kib": 4194304,
+    "sample_period_seconds": 2,
+    "spark_1_min_mem_available_kib_observed": 13845576,
+    "spark_1_min_swap_free_kib_observed": 13488984,
+    "spark_2_min_mem_available_kib_observed": 20645056,
+    "spark_2_min_swap_free_kib_observed": 14008568,
+    "triggered": false
+  },
+  "outcome": "store-skipped-fail-closed",
+  "output_sha256": "7eb1182ca59ece055a94690b7ab0da0ebc535fafde83683fb525787b2a1f5ec4",
+  "phase": "producer",
+  "prompt_padding_bytes": 10,
+  "prompt_tokens": 260800,
+  "prompt_unit_repetitions": 21705,
+  "quorum_entries_after": 1,
+  "request_id": "chatcmpl-a62f649cbfafe1f1",
+  "runtime": "qwen3.8-flash-next-tp2-ep-mtp3",
+  "schema": "spoolcache-live-qualification-safety/v1",
+  "store_seconds_count_after": 0,
+  "target_span": 260800,
+  "unsafe_boundary_total_after": 2,
+  "unsafe_boundary_total_before": 1,
+  "wall_seconds": 110.109192
+}

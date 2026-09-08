@@ -1,0 +1,273 @@
+{
+  "schema": "spoolcache-release-qualification/v1",
+  "observed_at": "2026-09-08T02:29:45.825707+00:00",
+  "release": {
+    "schema": "spoolcache-release/v1",
+    "commit": "93e7ad49089e2b191eed1962b991fdad3653ce7d",
+    "source_date_epoch": 1788830793,
+    "wheel": "spoolcache-0.1.0-py3-none-any.whl",
+    "wheel_sha256": "9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b",
+    "build_requires": [
+      "setuptools==80.9.0",
+      "wheel==0.45.1"
+    ]
+  },
+  "independent_rebuild_identical": true,
+  "model": {
+    "locator": "google/gemma-4-E2B-it",
+    "revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7"
+  },
+  "official_base": "vllm/vllm-openai:v0.28.0@sha256:61fc8a896b0a4fbbbdc063bc4b0dbc25ce98e02b5050c24aeb7830ac02039b14",
+  "runtime_stacks": [
+    {
+      "target": "deepseek",
+      "base": {
+        "vllm": "0.25.2.dev0+g752a3a504.d20260714",
+        "torch": "2.11.0+cu130",
+        "cuda": "13.0",
+        "nccl": [
+          2,
+          28,
+          9
+        ]
+      },
+      "release": {
+        "vllm": "0.25.2.dev0+g752a3a504.d20260714",
+        "torch": "2.11.0+cu130",
+        "cuda": "13.0",
+        "nccl": [
+          2,
+          28,
+          9
+        ]
+      },
+      "unchanged": true
+    },
+    {
+      "target": "qwen",
+      "base": {
+        "vllm": "0.1.dev20073+g8e685d198",
+        "torch": "2.13.0+cu130",
+        "cuda": "13.0",
+        "nccl": [
+          2,
+          29,
+          7
+        ]
+      },
+      "release": {
+        "vllm": "0.1.dev20073+g8e685d198",
+        "torch": "2.13.0+cu130",
+        "cuda": "13.0",
+        "nccl": [
+          2,
+          29,
+          7
+        ]
+      },
+      "unchanged": true
+    },
+    {
+      "target": "glm",
+      "base": {
+        "vllm": "0.1.dev20051+g487ecf187",
+        "torch": "2.13.0+cu130",
+        "cuda": "13.0",
+        "nccl": [
+          2,
+          29,
+          7
+        ]
+      },
+      "release": {
+        "vllm": "0.1.dev20051+g487ecf187",
+        "torch": "2.13.0+cu130",
+        "cuda": "13.0",
+        "nccl": [
+          2,
+          29,
+          7
+        ]
+      },
+      "unchanged": true
+    },
+    {
+      "target": "official",
+      "base": {
+        "vllm": "0.28.0",
+        "torch": "2.13.0+cu130",
+        "cuda": "13.0",
+        "nccl": [
+          2,
+          29,
+          7
+        ]
+      },
+      "release": {
+        "vllm": "0.28.0",
+        "torch": "2.13.0+cu130",
+        "cuda": "13.0",
+        "nccl": [
+          2,
+          29,
+          7
+        ]
+      },
+      "unchanged": true
+    }
+  ],
+  "images": [
+    {
+      "target": "deepseek",
+      "base_image": "ghcr.io/anemll/dspark-vllm-gx10:0.1.1",
+      "base_image_id": "sha256:3430d6614a8e2925f34d059af6caf05aff42387326db4d05639a60f10f2654d8",
+      "base_repo_digests": [
+        "ghcr.io/anemll/dspark-vllm-gx10@sha256:a83948492cf13df455170fb42885f5ef4db54fefe0feff0f841ecbff464ac9d8"
+      ],
+      "image": "spoolcache-deepseek:0.1.0",
+      "image_id": "sha256:3e59ab5a2b8f73a9ed5389b4799068808fa35a312f4983df44e98a9cee759717",
+      "wheel_sha256": "9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b",
+      "worker_image_id": "sha256:3e59ab5a2b8f73a9ed5389b4799068808fa35a312f4983df44e98a9cee759717",
+      "identical": true
+    },
+    {
+      "target": "qwen",
+      "base_image": "vllm/vllm-openai:qwen38-flash-next",
+      "base_image_id": "sha256:d464f3b466fa9c45ddbff8a812e80564503b6879a9fd95c1a47514f3f0df5a4a",
+      "base_repo_digests": [],
+      "image": "spoolcache-qwen:0.1.0",
+      "image_id": "sha256:e6fb73b90e3ae63fbc6ebe6d3bb8ddec7ab126beabae578bccb170104c2180a5",
+      "wheel_sha256": "9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b",
+      "worker_image_id": "sha256:e6fb73b90e3ae63fbc6ebe6d3bb8ddec7ab126beabae578bccb170104c2180a5",
+      "identical": true
+    },
+    {
+      "target": "glm",
+      "base_image": "ghcr.io/miaai-lab/glm-5.3-flash-2x-dgx-sparks:exl3",
+      "base_image_id": "sha256:07e39baa1717d3be2328d556ae62801920563c54973b3467152d96e5b8e9bbde",
+      "base_repo_digests": [],
+      "image": "spoolcache-glm:0.1.0",
+      "image_id": "sha256:768243594f78f9e983143aab55f6594131c736e4e730eb5ce91104019c85d81a",
+      "wheel_sha256": "9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b",
+      "worker_image_id": "sha256:768243594f78f9e983143aab55f6594131c736e4e730eb5ce91104019c85d81a",
+      "identical": true
+    },
+    {
+      "target": "official",
+      "image": "spoolcache-dev:vllm-0.28.0",
+      "image_id": "sha256:f17f09d8b6c2622926e1508b0ce3f215101d5958bf407e319b26eb1c2694ffb4",
+      "worker_image_id": "sha256:f17f09d8b6c2622926e1508b0ce3f215101d5958bf407e319b26eb1c2694ffb4",
+      "identical": true
+    }
+  ],
+  "worker_installations": [
+    {
+      "target": "deepseek",
+      "image_id": "sha256:3e59ab5a2b8f73a9ed5389b4799068808fa35a312f4983df44e98a9cee759717",
+      "verification": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b"
+      }
+    },
+    {
+      "target": "qwen",
+      "image_id": "sha256:e6fb73b90e3ae63fbc6ebe6d3bb8ddec7ab126beabae578bccb170104c2180a5",
+      "verification": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b"
+      }
+    },
+    {
+      "target": "glm",
+      "image_id": "sha256:768243594f78f9e983143aab55f6594131c736e4e730eb5ce91104019c85d81a",
+      "verification": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b"
+      }
+    },
+    {
+      "target": "official",
+      "image_id": "sha256:f17f09d8b6c2622926e1508b0ce3f215101d5958bf407e319b26eb1c2694ffb4",
+      "verification": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b"
+      }
+    }
+  ],
+  "clean_installations": [
+    {
+      "import_path": "/tmp/g6-install-1-cssb6v0t/lib/python3.12/site-packages/spoolcache/__init__.py",
+      "schema": "spoolcache-install-verification/v1",
+      "status": "passed",
+      "verified_files": 27,
+      "version": "0.1.0",
+      "wheel_sha256": "9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b"
+    },
+    {
+      "import_path": "/tmp/g6-install-2-1h00u48r/lib/python3.12/site-packages/spoolcache/__init__.py",
+      "schema": "spoolcache-install-verification/v1",
+      "status": "passed",
+      "verified_files": 27,
+      "version": "0.1.0",
+      "wheel_sha256": "9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b",
+      "tampered_install_rejected": true
+    }
+  ],
+  "host_tests": "258 passed / 12 skipped / 279 subtests passed",
+  "runtime_tests": {
+    "official": "264 tests / 1 skipped / OK",
+    "deepseek": "264 tests / 1 skipped / OK",
+    "qwen": "264 tests / OK",
+    "glm": "264 tests / OK"
+  },
+  "runtime_skip_reason": "official/DeepSeek expose no non-prefix scratch spec",
+  "launcher_tests": "5 passed per deployment repository; includes missing wheel and mismatched participant images",
+  "live": {
+    "pp1": {
+      "receipt": "live-pp1.json",
+      "status": "passed",
+      "cases": 5,
+      "authenticated_manifests": 5,
+      "authenticated_objects": 75
+    },
+    "pp2": {
+      "receipt": "live-pp2.json",
+      "status": "passed",
+      "cases": 5,
+      "authenticated_manifests": 10,
+      "authenticated_objects": 75,
+      "upstream_qualification_partition": [
+        12,
+        23
+      ]
+    }
+  },
+  "limitations": [
+    "Functional/fault tests used the standalone Gemma qualification harness with development endpoints enabled for GPU-only reset; production configurations force development endpoints off.",
+    "DeepSeek/Qwen/GLM testing used installed-wheel CUDA/runtime suites, not new real-model feature or maximum-context runs.",
+    "No 24-hour soak or new performance speedup claim is part of this receipt. This candidate receipt predates the semantic-release GitHub/PyPI publication receipt."
+  ],
+  "qualification_notes": [
+    "An initial audio control used overlapping choices including SPEECH. Both cold bypasses chose SPEECH, so the semantic assertion failed before restore. Mutually exclusive song-title choices established a stable MARY_HAD_A_LITTLE_LAMB oracle; the failed controls are preserved.",
+    "The first PP=1 fault rejected the incomplete client stream and restored the authenticated object, but vLLM omitted the child exit code from logs. The repeat used external strace restricted to exit_group and observed exit_group(70); no vLLM or connector code was modified.",
+    "PP=2 long padded image and mixed cold controls stably answered OTHER. These paths prove deterministic complete-output equivalence plus authenticated rank payloads, not semantic classification accuracy; short image control was CATS. Negative experiments are retained.",
+    "A remote PP stage exited 70 while the head health endpoint remained successful and the client hung. The final fault observation uses an external deployment-owned whole-group stop after observing worker exit. API readiness is false after that stop and the incomplete stream is rejected. No automatic cross-host supervisor or upstream readiness propagation is claimed."
+  ],
+  "result": "passed"
+}

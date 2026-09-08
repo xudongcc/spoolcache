@@ -1,0 +1,53 @@
+{
+  "coordination": "spoolcache-coordination/v1",
+  "entry_id": "6f6297f2f5039998ee827d3aae21326e692f69be4e8abcef2a586dc00ae7e205",
+  "failure_before_fix": {
+    "consumer_target_tokens": 208000,
+    "error": "LayoutError: selected HMA page contains vLLM's null/invalid block",
+    "producer_span_tokens": 160000,
+    "receipt": "2026-09-07-g3d-qwen-text-208k-restore-failure.json"
+  },
+  "fix": {
+    "core_model_special_cases": 0,
+    "layout_schema": "spoolcache-hma-layout/v4",
+    "logical_layout_digest": "0a5f87417655579d3dfeabd6767c788ca3037555f8b0856f6ee9ce2dac5a3bc6",
+    "mechanism": "runtime-discovered recurrent cache num_speculative_blocks",
+    "running_state_tail_pages": 3
+  },
+  "payload_authentication": {
+    "logical_bytes_per_rank": 2324992000,
+    "objects_per_rank": 102,
+    "rank0": "all-payloads-authenticated",
+    "rank1": "all-payloads-authenticated"
+  },
+  "producer": {
+    "cached_tokens": 0,
+    "output_sha256": "9b2fab355d67353084be1a5efb007737c4d68b773b5f880c7a46c4075dbb8765",
+    "prompt_tokens": 160000,
+    "request_id": "cmpl-b3e826cb37e6265c"
+  },
+  "result": "passed",
+  "runtime": "qwen3.8-flash-next-tp2-ep-mtp3",
+  "schema": "spoolcache-live-qualification/v1",
+  "startup_after_full_tp_restart": {
+    "rank0_entries": 1,
+    "rank1_entries": 1,
+    "rank_quorum_entries_after_first_stats_exchange": 1,
+    "ready_ranks": 2,
+    "required_ranks": 2
+  },
+  "verification": {
+    "cached_tokens": 160000,
+    "cold_bypass_ttft_seconds": 84.57456916000046,
+    "consumer_target_tokens": 208000,
+    "fatal_clear": true,
+    "layout_errors": 0,
+    "output_sha256": "9b2fab355d67353084be1a5efb007737c4d68b773b5f880c7a46c4075dbb8765",
+    "post_admission_failures": 0,
+    "rank0_restore": true,
+    "rank1_restore": true,
+    "request_id": "cmpl-85a774c12a1ebd42",
+    "restore_bytes_total": 4649984000,
+    "restored_ttft_seconds": 23.84342828500121
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "aborted": false,
+  "cache_salt": "g3d-qwen-v4-restore",
+  "cached_tokens": 0,
+  "completion_tokens": 8,
+  "elapsed_seconds": 63.517420744001356,
+  "entry_id": "6f6297f2f5039998ee827d3aae21326e692f69be4e8abcef2a586dc00ae7e205",
+  "gmu": 0.75,
+  "health_after_request": "api live; ranks 2/2; supervisor ready; inventory quorum ready; rank identity ready; fatal clear",
+  "layout_schema": "spoolcache-hma-layout/v4",
+  "memory_guard": {
+    "minimum_mem_available_kib": 3145728,
+    "minimum_swap_free_kib": 4194304,
+    "sample_period_seconds": 2,
+    "spark_1_min_mem_available_kib_observed": 12874932,
+    "spark_1_min_swap_free_kib_observed": 11650400,
+    "spark_2_min_mem_available_kib_observed": 20501380,
+    "spark_2_min_swap_free_kib_observed": 14155840,
+    "triggered": false
+  },
+  "nonce": "g3d-qwen-v4-running-page",
+  "output_preview": " theta iota kappa. alpha beta gamma delta",
+  "output_sha256": "9b2fab355d67353084be1a5efb007737c4d68b773b5f880c7a46c4075dbb8765",
+  "payload_authentication": {
+    "logical_bytes_per_rank": 2324992000,
+    "objects_per_rank": 102,
+    "rank0": "all-payloads-authenticated",
+    "rank1": "all-payloads-authenticated"
+  },
+  "prompt_tokens": 160000,
+  "request_id": "cmpl-b3e826cb37e6265c",
+  "running_state_tail_pages": 3,
+  "runtime": "qwen3.8-flash-next-tp2-ep-mtp3",
+  "schema": "spoolcache-live-qualification/v1",
+  "spoolcache_bypass": false,
+  "spoolcache_rank_quorum_entries_after": 1,
+  "spoolcache_store_bytes_total_after": 4649984000,
+  "spoolcache_store_seconds_count_after": 2,
+  "target_tokens": 160000,
+  "ttft_seconds": 60.70327910500055
+}

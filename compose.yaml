@@ -1,0 +1,66 @@
+name: spoolcache-dev
+
+services:
+  vllm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SPOOLCACHE_WHEEL: ${SPOOLCACHE_WHEEL:?Set path to the release wheel}
+        SPOOLCACHE_WHEEL_SHA256: ${SPOOLCACHE_WHEEL_SHA256:?Set release wheel SHA-256}
+        SPOOLCACHE_COMMIT: ${SPOOLCACHE_COMMIT:?Set release commit}
+    image: spoolcache-dev:vllm-0.28.0
+    container_name: spoolcache-dev-vllm
+    init: true
+    gpus: all
+    ipc: host
+    network_mode: host
+    stop_grace_period: 2m
+    environment:
+      HF_HUB_OFFLINE: "1"
+      VLLM_LOGGING_LEVEL: DEBUG
+      VLLM_SERVER_DEV_MODE: "1"
+    volumes:
+      - type: bind
+        source: ${HF_HOME:-/root/.cache/huggingface}
+        target: /root/.cache/huggingface
+        read_only: true
+      - type: volume
+        source: spoolcache-dev-data
+        target: /var/lib/spoolcache
+    command:
+      - google/gemma-4-E2B-it
+      - --revision
+      - 3e22461f65e89153144f8adb70e3b8c2cc9845a7
+      - --served-model-name
+      - google/gemma-4-E2B-it
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --tensor-parallel-size
+      - "1"
+      - --pipeline-parallel-size
+      - "1"
+      - --max-model-len
+      - "16384"
+      - --gpu-memory-utilization
+      - "0.80"
+      - --enable-prefix-caching
+      - --enable-prompt-tokens-details
+      - --kv-transfer-config
+      - >-
+        {"kv_connector":"SpoolCacheConnector","kv_role":"kv_both","kv_connector_module_path":"spoolcache.vllm.connector","kv_load_failure_policy":"fail","kv_connector_extra_config":{"spoolcache_root":"/var/lib/spoolcache","spoolcache_deployment_namespace":"gemma4-e2b-development","spoolcache_access_mode":"read-write","spoolcache_direct_io":"required","spoolcache_max_bytes":214748364800}}
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 5m
+
+volumes:
+  spoolcache-dev-data:

@@ -1,0 +1,1170 @@
+{
+  "topology": {
+    "tp": 1,
+    "pp": 1,
+    "dcp": 1
+  },
+  "cases": {
+    "text": {
+      "control1": {
+        "cached_tokens": 0,
+        "completion_tokens": 8,
+        "elapsed_seconds": 1.4137401100015268,
+        "output_preview": " epsilon zeta eta theta iota kappa.",
+        "output_sha256": "7a7bcd4680eb64f51f1f69c732303943f6a0a7b662088fddc6ca7ce5336add03",
+        "prompt_source_tokens": 4128,
+        "prompt_tokens": 4128,
+        "request_id": "cmpl-95d70b1613625a39",
+        "target_tokens": 4128,
+        "ttft_seconds": 1.2302642169961473
+      },
+      "control2": {
+        "cached_tokens": 0,
+        "completion_tokens": 8,
+        "elapsed_seconds": 0.5932446099905064,
+        "output_preview": " epsilon zeta eta theta iota kappa.",
+        "output_sha256": "7a7bcd4680eb64f51f1f69c732303943f6a0a7b662088fddc6ca7ce5336add03",
+        "prompt_source_tokens": 4128,
+        "prompt_tokens": 4128,
+        "request_id": "cmpl-9a793764006aa24a",
+        "target_tokens": 4128,
+        "ttft_seconds": 0.40597015198727604
+      },
+      "producer": {
+        "cached_tokens": 0,
+        "completion_tokens": 8,
+        "elapsed_seconds": 0.8189405440061819,
+        "output_preview": " iota kappa. alpha beta gamma delta",
+        "output_sha256": "c03fc4b4ce91774d3dfbac0f2aa6506b969a0e061d53c5d4494fee232cf3d869",
+        "prompt_source_tokens": 4128,
+        "prompt_tokens": 4096,
+        "request_id": "cmpl-835cec21e146135b",
+        "target_tokens": 4096,
+        "ttft_seconds": 0.6325897339993389
+      },
+      "restore": {
+        "cached_tokens": 2048,
+        "completion_tokens": 8,
+        "elapsed_seconds": 0.4441642530000536,
+        "output_preview": " epsilon zeta eta theta iota kappa.",
+        "output_sha256": "7a7bcd4680eb64f51f1f69c732303943f6a0a7b662088fddc6ca7ce5336add03",
+        "prompt_source_tokens": 4128,
+        "prompt_tokens": 4128,
+        "request_id": "cmpl-a4e49442b86454f0",
+        "target_tokens": 4128,
+        "ttft_seconds": 0.2587412669963669
+      },
+      "post-restart": {
+        "cached_tokens": 2048,
+        "completion_tokens": 8,
+        "elapsed_seconds": 0.47227609499532264,
+        "output_preview": " epsilon zeta eta theta iota kappa.",
+        "output_sha256": "7a7bcd4680eb64f51f1f69c732303943f6a0a7b662088fddc6ca7ce5336add03",
+        "prompt_source_tokens": 4128,
+        "prompt_tokens": 4128,
+        "request_id": "cmpl-b507759ae8bdab96",
+        "target_tokens": 4128,
+        "ttft_seconds": 0.2875947980064666
+      }
+    },
+    "image": {
+      "control1": {
+        "alignment": 32,
+        "bypass_spoolcache": true,
+        "cached_tokens": 0,
+        "completion_tokens": 2,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 173131,
+          "kind": "image",
+          "mime": "image/jpeg",
+          "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+        },
+        "oracle_label": "CATS",
+        "output": {
+          "content": "CATS",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+        "phase": "consumer",
+        "prompt_padding_bytes": 12,
+        "prompt_tokens": 4138,
+        "prompt_unit_repetitions": 316,
+        "request_id": "chatcmpl-bef8ee264c25027f",
+        "target_span": 4096,
+        "wall_seconds": 1.392072
+      },
+      "control2": {
+        "alignment": 32,
+        "bypass_spoolcache": true,
+        "cached_tokens": 0,
+        "completion_tokens": 2,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 173131,
+          "kind": "image",
+          "mime": "image/jpeg",
+          "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+        },
+        "oracle_label": "CATS",
+        "output": {
+          "content": "CATS",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+        "phase": "consumer",
+        "prompt_padding_bytes": 12,
+        "prompt_tokens": 4138,
+        "prompt_unit_repetitions": 316,
+        "request_id": "chatcmpl-8afb5e5128585183",
+        "target_span": 4096,
+        "wall_seconds": 0.542992
+      },
+      "producer": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 0,
+        "completion_tokens": 3,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 173131,
+          "kind": "image",
+          "mime": "image/jpeg",
+          "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+        },
+        "oracle_label": null,
+        "output": {
+          "content": "CATS",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+        "phase": "producer",
+        "prompt_padding_bytes": 12,
+        "prompt_tokens": 4096,
+        "prompt_unit_repetitions": 316,
+        "request_id": "chatcmpl-96983fe2a3c1ce28",
+        "target_span": 4096,
+        "wall_seconds": 0.770259
+      },
+      "restore": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 2048,
+        "completion_tokens": 2,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 173131,
+          "kind": "image",
+          "mime": "image/jpeg",
+          "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+        },
+        "oracle_label": "CATS",
+        "output": {
+          "content": "CATS",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+        "phase": "consumer",
+        "prompt_padding_bytes": 12,
+        "prompt_tokens": 4138,
+        "prompt_unit_repetitions": 316,
+        "request_id": "chatcmpl-b17934c18da88877",
+        "target_span": 4096,
+        "wall_seconds": 0.320936
+      },
+      "post-restart": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 2048,
+        "completion_tokens": 2,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 173131,
+          "kind": "image",
+          "mime": "image/jpeg",
+          "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+        },
+        "oracle_label": "CATS",
+        "output": {
+          "content": "CATS",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "f43c3a6a804ebd0b94e1d1384cb4680f7a24a9d2558076cfee5fee173e0836f8",
+        "phase": "consumer",
+        "prompt_padding_bytes": 12,
+        "prompt_tokens": 4138,
+        "prompt_unit_repetitions": 316,
+        "request_id": "chatcmpl-8ba91b62da816f22",
+        "target_span": 4096,
+        "wall_seconds": 1.023027
+      }
+    },
+    "audio": {
+      "control1": {
+        "alignment": 32,
+        "bypass_spoolcache": true,
+        "cached_tokens": 0,
+        "completion_tokens": 12,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 65449,
+          "kind": "audio",
+          "mime": "audio/ogg",
+          "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+        },
+        "oracle_label": "MARY_HAD_A_LITTLE_LAMB",
+        "output": {
+          "content": "MARY_HAD_A_LITTLE_LAMB",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "f58effbcb9b1dd8008724ac940fb853b8962ab7ee9f016a963402f2e089c1f60",
+        "phase": "consumer",
+        "prompt_padding_bytes": 10,
+        "prompt_tokens": 4157,
+        "prompt_unit_repetitions": 305,
+        "request_id": "chatcmpl-9ba17c8f86607fc0",
+        "target_span": 4096,
+        "wall_seconds": 0.737097
+      },
+      "control2": {
+        "alignment": 32,
+        "bypass_spoolcache": true,
+        "cached_tokens": 0,
+        "completion_tokens": 12,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 65449,
+          "kind": "audio",
+          "mime": "audio/ogg",
+          "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+        },
+        "oracle_label": "MARY_HAD_A_LITTLE_LAMB",
+        "output": {
+          "content": "MARY_HAD_A_LITTLE_LAMB",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "f58effbcb9b1dd8008724ac940fb853b8962ab7ee9f016a963402f2e089c1f60",
+        "phase": "consumer",
+        "prompt_padding_bytes": 10,
+        "prompt_tokens": 4157,
+        "prompt_unit_repetitions": 305,
+        "request_id": "chatcmpl-940894cdd7e97da5",
+        "target_span": 4096,
+        "wall_seconds": 0.747727
+      },
+      "producer": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 0,
+        "completion_tokens": 16,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 65449,
+          "kind": "audio",
+          "mime": "audio/ogg",
+          "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+        },
+        "oracle_label": null,
+        "output": {
+          "content": "TWINKLE_TWINKLE_LITTLE_STAR",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "5da29f4bd4d3d9547c5b32ab1b295bae09a9860b2facec0cbccc411cc64607ba",
+        "phase": "producer",
+        "prompt_padding_bytes": 10,
+        "prompt_tokens": 4096,
+        "prompt_unit_repetitions": 305,
+        "request_id": "chatcmpl-9881f2a2499fbed4",
+        "target_span": 4096,
+        "wall_seconds": 1.104671
+      },
+      "restore": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 2048,
+        "completion_tokens": 12,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 65449,
+          "kind": "audio",
+          "mime": "audio/ogg",
+          "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+        },
+        "oracle_label": "MARY_HAD_A_LITTLE_LAMB",
+        "output": {
+          "content": "MARY_HAD_A_LITTLE_LAMB",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "f58effbcb9b1dd8008724ac940fb853b8962ab7ee9f016a963402f2e089c1f60",
+        "phase": "consumer",
+        "prompt_padding_bytes": 10,
+        "prompt_tokens": 4157,
+        "prompt_unit_repetitions": 305,
+        "request_id": "chatcmpl-87c368fd3ed733d2",
+        "target_span": 4096,
+        "wall_seconds": 0.573416
+      },
+      "post-restart": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 2048,
+        "completion_tokens": 12,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 65449,
+          "kind": "audio",
+          "mime": "audio/ogg",
+          "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+        },
+        "oracle_label": "MARY_HAD_A_LITTLE_LAMB",
+        "output": {
+          "content": "MARY_HAD_A_LITTLE_LAMB",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "f58effbcb9b1dd8008724ac940fb853b8962ab7ee9f016a963402f2e089c1f60",
+        "phase": "consumer",
+        "prompt_padding_bytes": 10,
+        "prompt_tokens": 4157,
+        "prompt_unit_repetitions": 305,
+        "request_id": "chatcmpl-8bff0776a82f3f24",
+        "target_span": 4096,
+        "wall_seconds": 0.585585
+      }
+    },
+    "video": {
+      "control1": {
+        "alignment": 32,
+        "bypass_spoolcache": true,
+        "cached_tokens": 0,
+        "completion_tokens": 3,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 549197,
+          "kind": "video",
+          "mime": "video/mp4",
+          "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+        },
+        "oracle_label": "ARCHERY",
+        "output": {
+          "content": "ARCHERY",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+        "phase": "consumer",
+        "prompt_padding_bytes": 22,
+        "prompt_tokens": 4137,
+        "prompt_unit_repetitions": 146,
+        "request_id": "chatcmpl-a8703528e7d03a2f",
+        "target_span": 4096,
+        "wall_seconds": 1.229216
+      },
+      "control2": {
+        "alignment": 32,
+        "bypass_spoolcache": true,
+        "cached_tokens": 0,
+        "completion_tokens": 3,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 549197,
+          "kind": "video",
+          "mime": "video/mp4",
+          "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+        },
+        "oracle_label": "ARCHERY",
+        "output": {
+          "content": "ARCHERY",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+        "phase": "consumer",
+        "prompt_padding_bytes": 22,
+        "prompt_tokens": 4137,
+        "prompt_unit_repetitions": 146,
+        "request_id": "chatcmpl-b8d3969671ecd460",
+        "target_span": 4096,
+        "wall_seconds": 1.224001
+      },
+      "producer": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 0,
+        "completion_tokens": 5,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 549197,
+          "kind": "video",
+          "mime": "video/mp4",
+          "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+        },
+        "oracle_label": null,
+        "output": {
+          "content": "ARCHERY",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+        "phase": "producer",
+        "prompt_padding_bytes": 22,
+        "prompt_tokens": 4096,
+        "prompt_unit_repetitions": 146,
+        "request_id": "chatcmpl-ae4610df5e0c84c0",
+        "target_span": 4096,
+        "wall_seconds": 1.544656
+      },
+      "restore": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 2048,
+        "completion_tokens": 3,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 549197,
+          "kind": "video",
+          "mime": "video/mp4",
+          "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+        },
+        "oracle_label": "ARCHERY",
+        "output": {
+          "content": "ARCHERY",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+        "phase": "consumer",
+        "prompt_padding_bytes": 22,
+        "prompt_tokens": 4137,
+        "prompt_unit_repetitions": 146,
+        "request_id": "chatcmpl-a612f7bbaa5c6b29",
+        "target_span": 4096,
+        "wall_seconds": 1.078508
+      },
+      "post-restart": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 2048,
+        "completion_tokens": 3,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": {
+          "bytes": 549197,
+          "kind": "video",
+          "mime": "video/mp4",
+          "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+        },
+        "oracle_label": "ARCHERY",
+        "output": {
+          "content": "ARCHERY",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "9041bdc879c87001e177bc15e8eca4e2de5d1aabe1038204e1f68d8d631e64dd",
+        "phase": "consumer",
+        "prompt_padding_bytes": 22,
+        "prompt_tokens": 4137,
+        "prompt_unit_repetitions": 146,
+        "request_id": "chatcmpl-aa9b243e8139c301",
+        "target_span": 4096,
+        "wall_seconds": 0.947152
+      }
+    },
+    "mixed": {
+      "control1": {
+        "alignment": 32,
+        "bypass_spoolcache": true,
+        "cached_tokens": 0,
+        "completion_tokens": 7,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": [
+          {
+            "bytes": 549197,
+            "kind": "video",
+            "mime": "video/mp4",
+            "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+          },
+          {
+            "bytes": 173131,
+            "kind": "image",
+            "mime": "image/jpeg",
+            "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+          },
+          {
+            "bytes": 65449,
+            "kind": "audio",
+            "mime": "audio/ogg",
+            "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+          }
+        ],
+        "oracle_label": "CATS_MARY_ARCHERY",
+        "output": {
+          "content": "CATS_MARY_ARCHERY",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "a68325f169555a2158ea6bd3f942260a8849335d8755429318118d7794a5e307",
+        "phase": "consumer",
+        "prompt_padding_bytes": 4,
+        "prompt_tokens": 4149,
+        "prompt_unit_repetitions": 91,
+        "request_id": "chatcmpl-a006dd0818d0c895",
+        "target_span": 4096,
+        "wall_seconds": 1.436528
+      },
+      "control2": {
+        "alignment": 32,
+        "bypass_spoolcache": true,
+        "cached_tokens": 0,
+        "completion_tokens": 7,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": [
+          {
+            "bytes": 549197,
+            "kind": "video",
+            "mime": "video/mp4",
+            "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+          },
+          {
+            "bytes": 173131,
+            "kind": "image",
+            "mime": "image/jpeg",
+            "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+          },
+          {
+            "bytes": 65449,
+            "kind": "audio",
+            "mime": "audio/ogg",
+            "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+          }
+        ],
+        "oracle_label": "CATS_MARY_ARCHERY",
+        "output": {
+          "content": "CATS_MARY_ARCHERY",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "a68325f169555a2158ea6bd3f942260a8849335d8755429318118d7794a5e307",
+        "phase": "consumer",
+        "prompt_padding_bytes": 4,
+        "prompt_tokens": 4149,
+        "prompt_unit_repetitions": 91,
+        "request_id": "chatcmpl-bd9c30a97e925ba9",
+        "target_span": 4096,
+        "wall_seconds": 1.439929
+      },
+      "producer": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 0,
+        "completion_tokens": 13,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": [
+          {
+            "bytes": 549197,
+            "kind": "video",
+            "mime": "video/mp4",
+            "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+          },
+          {
+            "bytes": 173131,
+            "kind": "image",
+            "mime": "image/jpeg",
+            "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+          },
+          {
+            "bytes": 65449,
+            "kind": "audio",
+            "mime": "audio/ogg",
+            "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+          }
+        ],
+        "oracle_label": null,
+        "output": {
+          "content": "CATS_MARY_ARCHERY",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "a68325f169555a2158ea6bd3f942260a8849335d8755429318118d7794a5e307",
+        "phase": "producer",
+        "prompt_padding_bytes": 4,
+        "prompt_tokens": 4096,
+        "prompt_unit_repetitions": 91,
+        "request_id": "chatcmpl-b5b26d53313d7e4a",
+        "target_span": 4096,
+        "wall_seconds": 1.884895
+      },
+      "restore": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 2560,
+        "completion_tokens": 7,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": [
+          {
+            "bytes": 549197,
+            "kind": "video",
+            "mime": "video/mp4",
+            "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+          },
+          {
+            "bytes": 173131,
+            "kind": "image",
+            "mime": "image/jpeg",
+            "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+          },
+          {
+            "bytes": 65449,
+            "kind": "audio",
+            "mime": "audio/ogg",
+            "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+          }
+        ],
+        "oracle_label": "CATS_MARY_ARCHERY",
+        "output": {
+          "content": "CATS_MARY_ARCHERY",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "a68325f169555a2158ea6bd3f942260a8849335d8755429318118d7794a5e307",
+        "phase": "consumer",
+        "prompt_padding_bytes": 4,
+        "prompt_tokens": 4149,
+        "prompt_unit_repetitions": 91,
+        "request_id": "chatcmpl-9780ba70512cfdd0",
+        "target_span": 4096,
+        "wall_seconds": 0.628861
+      },
+      "post-restart": {
+        "alignment": 32,
+        "bypass_spoolcache": false,
+        "cached_tokens": 2560,
+        "completion_tokens": 7,
+        "consumer_extension_padding_bytes": 0,
+        "consumer_extension_repetitions": 0,
+        "fixture": [
+          {
+            "bytes": 549197,
+            "kind": "video",
+            "mime": "video/mp4",
+            "sha256": "8d029ab048f571b136a8c0afddbbac022606022ca95307a78655dbde9735a562"
+          },
+          {
+            "bytes": 173131,
+            "kind": "image",
+            "mime": "image/jpeg",
+            "sha256": "dea9e7ef97386345f7cff32f9055da4982da5471c48d575146c796ab4563b04e"
+          },
+          {
+            "bytes": 65449,
+            "kind": "audio",
+            "mime": "audio/ogg",
+            "sha256": "c8f0a87f8d7e44f2d6e0f88ec63f6401b4f153f53fd14a9d730a5d1ba9927c4e"
+          }
+        ],
+        "oracle_label": "CATS_MARY_ARCHERY",
+        "output": {
+          "content": "CATS_MARY_ARCHERY",
+          "finish_reason": "stop",
+          "reasoning": null,
+          "reasoning_content": null,
+          "tool_calls": null
+        },
+        "output_sha256": "a68325f169555a2158ea6bd3f942260a8849335d8755429318118d7794a5e307",
+        "phase": "consumer",
+        "prompt_padding_bytes": 4,
+        "prompt_tokens": 4149,
+        "prompt_unit_repetitions": 91,
+        "request_id": "chatcmpl-9e38cdd6ad6d715d",
+        "target_span": 4096,
+        "wall_seconds": 0.610195
+      }
+    }
+  },
+  "fault": {
+    "status": "passed",
+    "client_rejected": true,
+    "api_readiness_false": true,
+    "all_ranks_stopped": [
+      "stopped"
+    ],
+    "worker_exit_code": 70,
+    "corrupted_rank": 0,
+    "entry_id": "f4499a8a95b5ddc5eff5a2d8d6af52ac0b0a0e481cd27afa93b01972b0d04eb6",
+    "expected_span": 2048,
+    "object_recovery": {
+      "status": "restored-and-authenticated",
+      "target": "/var/lib/spoolcache/b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697/rank-0000/objects/33/33451ca16bcbaa25033bc59c078eb71d834f4ef176370be8b6d4ef7bf03ee9a9.spool",
+      "sha256": "33451ca16bcbaa25033bc59c078eb71d834f4ef176370be8b6d4ef7bf03ee9a9"
+    }
+  },
+  "payloads": [
+    {
+      "kind": "text",
+      "rank": 0,
+      "expected": {
+        "rank-root": "/var/lib/spoolcache/b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697/rank-0000",
+        "entry-id": "f4499a8a95b5ddc5eff5a2d8d6af52ac0b0a0e481cd27afa93b01972b0d04eb6",
+        "expected-span": 2048,
+        "expected-deployment-identity-digest": "b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697",
+        "expected-rank-identity-digest": "cf8a6d8e7623cc5445d485ea1d57a0f9ac68ff53767aacb01c8d18c01a61d74b",
+        "expected-physical-rank": 0,
+        "expected-tp-degree": 1,
+        "expected-pp-degree": 1,
+        "expected-dcp-degree": 1,
+        "expected-pp-rank": 0,
+        "expected-tp-rank": 0,
+        "expected-dcp-rank": 0,
+        "expected-topology-digest": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+        "expected-layout-digest": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d",
+        "expected-groups": 5,
+        "expected-layers": 15,
+        "expected-group-layers": "3,3,3,3,3",
+        "expected-pages": "16,16,16,16,128"
+      },
+      "verification": {
+        "content_index_sha256": "7a5e99773f7bc903fcc8796a197c506540b772e4e98e102cb59a88ee1e08eba8",
+        "deployment_identity_digest": "b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697",
+        "entry_id": "f4499a8a95b5ddc5eff5a2d8d6af52ac0b0a0e481cd27afa93b01972b0d04eb6",
+        "group_layers": {
+          "0": 3,
+          "1": 3,
+          "2": 3,
+          "3": 3,
+          "4": 3
+        },
+        "group_pages": {
+          "0": 16,
+          "1": 16,
+          "2": 16,
+          "3": 16,
+          "4": 128
+        },
+        "groups": 5,
+        "layers": 15,
+        "layout_digest": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d",
+        "logical_bytes": 18874368,
+        "manifest_payload_sha256": "c1824b7434b970724cc3f30a2bfb40c8ee7f837031bad4e776f2d104356e4cf8",
+        "objects": 15,
+        "physical_rank": 0,
+        "profile": "vllm-runtime-kv-v1",
+        "rank_identity_digest": "cf8a6d8e7623cc5445d485ea1d57a0f9ac68ff53767aacb01c8d18c01a61d74b",
+        "span_tokens": 2048,
+        "status": "all-payloads-authenticated",
+        "stored_bytes": 18874368,
+        "topology_digest": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+        "worker_coordinate": {
+          "dcp_rank": 0,
+          "pp_rank": 0,
+          "tp_rank": 0
+        }
+      }
+    },
+    {
+      "kind": "image",
+      "rank": 0,
+      "expected": {
+        "rank-root": "/var/lib/spoolcache/b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697/rank-0000",
+        "entry-id": "161cb0926b390b0406f4aaf2f970dda50f23401d6a113ecb95f78307cfa0540b",
+        "expected-span": 2048,
+        "expected-deployment-identity-digest": "b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697",
+        "expected-rank-identity-digest": "cf8a6d8e7623cc5445d485ea1d57a0f9ac68ff53767aacb01c8d18c01a61d74b",
+        "expected-physical-rank": 0,
+        "expected-tp-degree": 1,
+        "expected-pp-degree": 1,
+        "expected-dcp-degree": 1,
+        "expected-pp-rank": 0,
+        "expected-tp-rank": 0,
+        "expected-dcp-rank": 0,
+        "expected-topology-digest": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+        "expected-layout-digest": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d",
+        "expected-groups": 5,
+        "expected-layers": 15,
+        "expected-group-layers": "3,3,3,3,3",
+        "expected-pages": "16,16,16,16,128"
+      },
+      "verification": {
+        "content_index_sha256": "ce8104f575901de9ba13ebe2f87fe73fe3223138fe13fe37997076ba51dbd321",
+        "deployment_identity_digest": "b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697",
+        "entry_id": "161cb0926b390b0406f4aaf2f970dda50f23401d6a113ecb95f78307cfa0540b",
+        "group_layers": {
+          "0": 3,
+          "1": 3,
+          "2": 3,
+          "3": 3,
+          "4": 3
+        },
+        "group_pages": {
+          "0": 16,
+          "1": 16,
+          "2": 16,
+          "3": 16,
+          "4": 128
+        },
+        "groups": 5,
+        "layers": 15,
+        "layout_digest": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d",
+        "logical_bytes": 18874368,
+        "manifest_payload_sha256": "466cc5f1372b51d54510a4c08143b4fe840db6b7407d35a62672c5edd8d6debf",
+        "objects": 15,
+        "physical_rank": 0,
+        "profile": "vllm-runtime-kv-v1",
+        "rank_identity_digest": "cf8a6d8e7623cc5445d485ea1d57a0f9ac68ff53767aacb01c8d18c01a61d74b",
+        "span_tokens": 2048,
+        "status": "all-payloads-authenticated",
+        "stored_bytes": 18874368,
+        "topology_digest": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+        "worker_coordinate": {
+          "dcp_rank": 0,
+          "pp_rank": 0,
+          "tp_rank": 0
+        }
+      }
+    },
+    {
+      "kind": "audio",
+      "rank": 0,
+      "expected": {
+        "rank-root": "/var/lib/spoolcache/b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697/rank-0000",
+        "entry-id": "e5c52ae9369dfd1d592b669ac09823abb4201fdafa6d0b17b856e4b95c06082f",
+        "expected-span": 2048,
+        "expected-deployment-identity-digest": "b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697",
+        "expected-rank-identity-digest": "cf8a6d8e7623cc5445d485ea1d57a0f9ac68ff53767aacb01c8d18c01a61d74b",
+        "expected-physical-rank": 0,
+        "expected-tp-degree": 1,
+        "expected-pp-degree": 1,
+        "expected-dcp-degree": 1,
+        "expected-pp-rank": 0,
+        "expected-tp-rank": 0,
+        "expected-dcp-rank": 0,
+        "expected-topology-digest": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+        "expected-layout-digest": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d",
+        "expected-groups": 5,
+        "expected-layers": 15,
+        "expected-group-layers": "3,3,3,3,3",
+        "expected-pages": "16,16,16,16,128"
+      },
+      "verification": {
+        "content_index_sha256": "16353d7c45331f79e4830757d7c7bd9c9741f8b444f4e02a194892dbc96b1f3c",
+        "deployment_identity_digest": "b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697",
+        "entry_id": "e5c52ae9369dfd1d592b669ac09823abb4201fdafa6d0b17b856e4b95c06082f",
+        "group_layers": {
+          "0": 3,
+          "1": 3,
+          "2": 3,
+          "3": 3,
+          "4": 3
+        },
+        "group_pages": {
+          "0": 16,
+          "1": 16,
+          "2": 16,
+          "3": 16,
+          "4": 128
+        },
+        "groups": 5,
+        "layers": 15,
+        "layout_digest": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d",
+        "logical_bytes": 18874368,
+        "manifest_payload_sha256": "be04ffa3dc432a614f9cf0c19bb3a6e2d134136d770b3f8fff5b8b4b0e69d5bc",
+        "objects": 15,
+        "physical_rank": 0,
+        "profile": "vllm-runtime-kv-v1",
+        "rank_identity_digest": "cf8a6d8e7623cc5445d485ea1d57a0f9ac68ff53767aacb01c8d18c01a61d74b",
+        "span_tokens": 2048,
+        "status": "all-payloads-authenticated",
+        "stored_bytes": 18874368,
+        "topology_digest": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+        "worker_coordinate": {
+          "dcp_rank": 0,
+          "pp_rank": 0,
+          "tp_rank": 0
+        }
+      }
+    },
+    {
+      "kind": "video",
+      "rank": 0,
+      "expected": {
+        "rank-root": "/var/lib/spoolcache/b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697/rank-0000",
+        "entry-id": "9f7dac6a7482f6da64bb608e61a0d0f1e036a2c7bba3c880c7b83fb640fae614",
+        "expected-span": 2048,
+        "expected-deployment-identity-digest": "b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697",
+        "expected-rank-identity-digest": "cf8a6d8e7623cc5445d485ea1d57a0f9ac68ff53767aacb01c8d18c01a61d74b",
+        "expected-physical-rank": 0,
+        "expected-tp-degree": 1,
+        "expected-pp-degree": 1,
+        "expected-dcp-degree": 1,
+        "expected-pp-rank": 0,
+        "expected-tp-rank": 0,
+        "expected-dcp-rank": 0,
+        "expected-topology-digest": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+        "expected-layout-digest": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d",
+        "expected-groups": 5,
+        "expected-layers": 15,
+        "expected-group-layers": "3,3,3,3,3",
+        "expected-pages": "16,16,16,16,128"
+      },
+      "verification": {
+        "content_index_sha256": "308f73b5bd02e6b70761a161a8af10051c48ac4a6d8ff96eac7695b7f3a2ef9f",
+        "deployment_identity_digest": "b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697",
+        "entry_id": "9f7dac6a7482f6da64bb608e61a0d0f1e036a2c7bba3c880c7b83fb640fae614",
+        "group_layers": {
+          "0": 3,
+          "1": 3,
+          "2": 3,
+          "3": 3,
+          "4": 3
+        },
+        "group_pages": {
+          "0": 16,
+          "1": 16,
+          "2": 16,
+          "3": 16,
+          "4": 128
+        },
+        "groups": 5,
+        "layers": 15,
+        "layout_digest": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d",
+        "logical_bytes": 18874368,
+        "manifest_payload_sha256": "bf66e9e779b7b712965a1105ca6e50ae108652a3f829ba2b78823003e9656918",
+        "objects": 15,
+        "physical_rank": 0,
+        "profile": "vllm-runtime-kv-v1",
+        "rank_identity_digest": "cf8a6d8e7623cc5445d485ea1d57a0f9ac68ff53767aacb01c8d18c01a61d74b",
+        "span_tokens": 2048,
+        "status": "all-payloads-authenticated",
+        "stored_bytes": 18874368,
+        "topology_digest": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+        "worker_coordinate": {
+          "dcp_rank": 0,
+          "pp_rank": 0,
+          "tp_rank": 0
+        }
+      }
+    },
+    {
+      "kind": "mixed",
+      "rank": 0,
+      "expected": {
+        "rank-root": "/var/lib/spoolcache/b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697/rank-0000",
+        "entry-id": "e38fb7bc437eacdd1a7a668d4df242d9339d6981191c7351126a93ba88bb0199",
+        "expected-span": 2560,
+        "expected-deployment-identity-digest": "b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697",
+        "expected-rank-identity-digest": "cf8a6d8e7623cc5445d485ea1d57a0f9ac68ff53767aacb01c8d18c01a61d74b",
+        "expected-physical-rank": 0,
+        "expected-tp-degree": 1,
+        "expected-pp-degree": 1,
+        "expected-dcp-degree": 1,
+        "expected-pp-rank": 0,
+        "expected-tp-rank": 0,
+        "expected-dcp-rank": 0,
+        "expected-topology-digest": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+        "expected-layout-digest": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d",
+        "expected-groups": 5,
+        "expected-layers": 15,
+        "expected-group-layers": "3,3,3,3,3",
+        "expected-pages": "16,16,16,16,160"
+      },
+      "verification": {
+        "content_index_sha256": "97289dfce65459b0ef134ca9d3086be2d09c6ad2ffbf1bef9ecc88401de2fe98",
+        "deployment_identity_digest": "b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697",
+        "entry_id": "e38fb7bc437eacdd1a7a668d4df242d9339d6981191c7351126a93ba88bb0199",
+        "group_layers": {
+          "0": 3,
+          "1": 3,
+          "2": 3,
+          "3": 3,
+          "4": 3
+        },
+        "group_pages": {
+          "0": 16,
+          "1": 16,
+          "2": 16,
+          "3": 16,
+          "4": 160
+        },
+        "groups": 5,
+        "layers": 15,
+        "layout_digest": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d",
+        "logical_bytes": 22020096,
+        "manifest_payload_sha256": "2c0cfee7d6b943276e0f31a7e65b087c542de4ceb918444c28be428065cd23a3",
+        "objects": 15,
+        "physical_rank": 0,
+        "profile": "vllm-runtime-kv-v1",
+        "rank_identity_digest": "cf8a6d8e7623cc5445d485ea1d57a0f9ac68ff53767aacb01c8d18c01a61d74b",
+        "span_tokens": 2560,
+        "status": "all-payloads-authenticated",
+        "stored_bytes": 22020096,
+        "topology_digest": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+        "worker_coordinate": {
+          "dcp_rank": 0,
+          "pp_rank": 0,
+          "tp_rank": 0
+        }
+      }
+    }
+  ],
+  "identities": [
+    {
+      "rank": "0",
+      "pp_rank": "0",
+      "tp_rank": "0",
+      "dcp_rank": "0",
+      "deployment": "b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697",
+      "rank_identity": "cf8a6d8e7623cc5445d485ea1d57a0f9ac68ff53767aacb01c8d18c01a61d74b",
+      "topology": "316ed57978d5484fd8c5f925fc199fe09c2d5c8ef19b9889bc23277c7d75b6b6",
+      "physical_layout": "0750c0830e139b5bad0c6489111481f2e92f1b6afd01dea5914637162a2c375a",
+      "hma_layout": "9540cc6985f2bb2411271f975a79d506abb21ab26e37047f49c6024fe63a9a6d",
+      "root": "/var/lib/spoolcache/b10eaa74ab469f43636d6ffba709acd6a7457f41e53a393e14a3f5d0bf89b697/rank-0000",
+      "groups": [
+        {
+          "index": 0,
+          "layers": 3,
+          "block": 32,
+          "storage_block": 32,
+          "policy": "sliding",
+          "window": 512,
+          "running_state_tail_pages": 0,
+          "dcp_replicated": false,
+          "dcp_shards": 1,
+          "eagle": false,
+          "layer_names_digest": "53d8840787d2",
+          "page_bytes": 32768
+        },
+        {
+          "index": 1,
+          "layers": 3,
+          "block": 32,
+          "storage_block": 32,
+          "policy": "sliding",
+          "window": 512,
+          "running_state_tail_pages": 0,
+          "dcp_replicated": false,
+          "dcp_shards": 1,
+          "eagle": false,
+          "layer_names_digest": "d44bbb0a4bdd",
+          "page_bytes": 32768
+        },
+        {
+          "index": 2,
+          "layers": 3,
+          "block": 32,
+          "storage_block": 32,
+          "policy": "sliding",
+          "window": 512,
+          "running_state_tail_pages": 0,
+          "dcp_replicated": false,
+          "dcp_shards": 1,
+          "eagle": false,
+          "layer_names_digest": "7ceb1e41f092",
+          "page_bytes": 32768
+        },
+        {
+          "index": 3,
+          "layers": 3,
+          "block": 32,
+          "storage_block": 32,
+          "policy": "sliding",
+          "window": 512,
+          "running_state_tail_pages": 0,
+          "dcp_replicated": false,
+          "dcp_shards": 1,
+          "eagle": false,
+          "layer_names_digest": "b32edabfef56",
+          "page_bytes": 32768
+        },
+        {
+          "index": 4,
+          "layers": 3,
+          "block": 16,
+          "storage_block": 16,
+          "policy": "full",
+          "window": null,
+          "running_state_tail_pages": 0,
+          "dcp_replicated": false,
+          "dcp_shards": 1,
+          "eagle": false,
+          "layer_names_digest": "67c35387b3af",
+          "page_bytes": 32768
+        }
+      ]
+    }
+  ],
+  "temporary_backup_cleanup": [
+    {
+      "status": "authenticated-temporary-backup-removed",
+      "backup": "/var/lib/spoolcache/.g6-qualification-backups/77fe5840404a42cd9c099874e5981368"
+    },
+    {
+      "status": "authenticated-temporary-backup-removed",
+      "backup": "/var/lib/spoolcache/.g6-qualification-backups/3940fefa85db48d092b1e8ce7bbcbe79"
+    }
+  ],
+  "exit_observation": "exit_group(70)                          = ?\n+++ exited with 70 +++\n"
+}

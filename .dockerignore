@@ -1,0 +1,14 @@
+.git/
+.github/
+.venv/
+.pytest_cache/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/*
+!dist/release/
+dist/release/*
+!dist/release/*.whl
+docs/receipts/
+results/

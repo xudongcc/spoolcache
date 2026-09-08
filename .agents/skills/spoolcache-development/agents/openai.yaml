@@ -1,0 +1,4 @@
+interface:
+  display_name: "SpoolCache Development"
+  short_description: "Develop and qualify patch-free vLLM KV caching"
+  default_prompt: "Use $spoolcache-development to implement and qualify a SpoolCache change safely."

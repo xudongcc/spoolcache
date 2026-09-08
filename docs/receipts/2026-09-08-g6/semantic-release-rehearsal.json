@@ -1,0 +1,71 @@
+{
+  "schema": "spoolcache-semantic-release-rehearsal/v1",
+  "psr_version": "10.6.2",
+  "uv_version": "0.12.2",
+  "first_release_output": "released=true\nversion=0.1.0\ntag=v0.1.0\nis_prerelease=false\nlink=https://github.com/xudongcc/spoolcache/releases/tag/v0.1.0\nprevious_version=\ncommit_sha=88193fde65bb7fd74b20e71476a2adb89ad7a032\nrelease_notes<<EOF\n## v0.1.0 (2026-09-08)\n\n_This release is published under the MIT License._\n\n- Initial Release\nEOF\n",
+  "version_cases": [
+    {
+      "commit_message": null,
+      "next_version": null,
+      "status": "passed"
+    },
+    {
+      "commit_message": "fix: release rehearsal patch",
+      "next_version": "0.1.1",
+      "status": "passed"
+    },
+    {
+      "commit_message": "feat: release rehearsal feature",
+      "next_version": "0.2.0",
+      "status": "passed"
+    },
+    {
+      "commit_message": "feat!: release rehearsal breaking change",
+      "next_version": "0.3.0",
+      "status": "passed"
+    },
+    {
+      "commit_message": "docs: release rehearsal no release",
+      "next_version": null,
+      "status": "passed"
+    }
+  ],
+  "build": {
+    "schema": "spoolcache-release/v1",
+    "commit": "88193fde65bb7fd74b20e71476a2adb89ad7a032",
+    "source_date_epoch": 1788833529,
+    "wheel": "spoolcache-0.1.0-py3-none-any.whl",
+    "wheel_sha256": "903f36f803764863170f067b551bdfcf96d207f8e307df3b25b9e89ce101f764",
+    "build_requires": [
+      "setuptools==80.9.0",
+      "wheel==0.45.1"
+    ]
+  },
+  "independent_rebuild_identical": true,
+  "twine_strict": "passed",
+  "actionlint_version": "1.7.12",
+  "actionlint": "passed",
+  "remote_publication": "pending final live recovery and first workflow run",
+  "github_environment": {
+    "name": "pypi",
+    "allowed_branches": [
+      "main"
+    ]
+  },
+  "trusted_publisher": "User confirmed PyPI pending publisher with screenshot: spoolcache / xudongcc/spoolcache / release.yml / pypi",
+  "fresh_pip_wheel_tests": "264 tests / 12 skipped / OK (Python 3.12; exact v0.1.0 release commit checkout)",
+  "fresh_wheel_verification": {
+    "status": "passed",
+    "verified_files": 27
+  },
+  "python_matrix_local": {
+    "3.10": "265 tests / 12 skipped / OK after fixing test-only exception-note assertions",
+    "3.11": "265 tests / 12 skipped / OK",
+    "3.12": "258 pytest tests / 12 skipped / 279 subtests; changed store assertions: 53 tests / 78 subtests / OK"
+  },
+  "first_workflow": {
+    "run": 34180354316,
+    "result": "correctly blocked at Python 3.10 tests; version/release/PyPI jobs skipped",
+    "fix": "Preserve primary-error and logged-secondary-error assertions on all Pythons; only require BaseException notes where add_note exists. No runtime package change."
+  }
+}
