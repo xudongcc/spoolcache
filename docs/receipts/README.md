@@ -33,9 +33,12 @@ count without rank agreement, output checks and payload authentication is not
 proof of correct persistent reuse.
 
 Pre-squash commit IDs are local provenance references. G6 explicitly separates
-candidate and public artifacts even though both carry version 0.1.0. The current
-CLI/path/direct-I/O changes are unreleased and are not covered by those live
-receipts solely because the local version field still reads 0.1.0.
+candidate and public artifacts even when they share a version string. The
+CLI/path/direct-I/O changes have since been released; their
+[Gemma regression evidence](2026-09-08-current-gemma/README.md) identifies a
+separately built candidate. A release or matching version string alone does not
+carry live qualification from one artifact to another. Published artifacts are
+listed on [GitHub Releases](https://github.com/xudongcc/spoolcache/releases).
 
 Machine JSON and raw archives are retained unchanged during the documentation
 rewrite. The [documentation archive](../archive/README.md) preserves the previous

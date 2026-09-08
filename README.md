@@ -13,23 +13,17 @@ SpoolCache is experimental. Runtime support is determined by public-interface
 checks and discovered cache semantics. See [compatibility and evidence](docs/COMPATIBILITY.md)
 for tested environments and limitations.
 
-> These docs describe the current checkout, including unreleased interface changes.
-> The recorded PyPI release is 0.1.0. Use the [installation guide](docs/INSTALLATION.md)
-> for that release and the [migration table](docs/MIGRATION.md) when upgrading.
+Published packages are available on [PyPI](https://pypi.org/project/spoolcache/).
+See [release notes](https://github.com/xudongcc/spoolcache/releases) and the
+[migration guide](docs/MIGRATION.md) when upgrading. For an older installation,
+use the documentation from its release tag.
 
 ## Install
 
 Install SpoolCache in the same Python environment as vLLM:
 
 ```bash
-python -m pip install spoolcache==0.1.0
-```
-
-To use the interfaces documented below, install this checkout from its repository
-root in that environment:
-
-```bash
-python -m pip install -e .
+python -m pip install --upgrade spoolcache
 spoolcache --help
 ```
 

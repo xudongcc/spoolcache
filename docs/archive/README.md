@@ -3,8 +3,8 @@
 [documentation-before-rewrite-2026-09-08.tar.gz](documentation-before-rewrite-2026-09-08.tar.gz)
 contains the exact eleven local Markdown files captured before this rewrite.
 [manifest.json](manifest.json) records every original path, byte count and SHA-256.
-The archive includes recent unreleased CLI/I/O/path edits as well as older
-engineering narratives; it is not a released source artifact.
+The archive includes CLI/I/O/path edits that were unreleased when captured, as
+well as older engineering narratives; it is not a released source artifact.
 
 Archive SHA-256:
 

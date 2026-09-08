@@ -18,34 +18,26 @@ SpoolCache does not bundle vLLM, Torch, CUDA or model weights. Package installat
 is separate from runtime qualification. Startup checks the installed vLLM public
 contracts; [Compatibility](COMPATIBILITY.md) defines the scope of that check.
 
-## Published 0.1.0
+## Published package
 
-The first recorded release is available from
-[PyPI](https://pypi.org/project/spoolcache/0.1.0/) and
-[GitHub](https://github.com/xudongcc/spoolcache/releases/tag/v0.1.0).
+Install or upgrade from [PyPI](https://pypi.org/project/spoolcache/).
+Published versions and release notes are listed on
+[GitHub Releases](https://github.com/xudongcc/spoolcache/releases).
 
 ```bash
-python -m pip install spoolcache==0.1.0
+python -m pip install --upgrade spoolcache
 python -c 'import spoolcache; print(spoolcache.__version__)'
-spoolcache-maintenance --help
+spoolcache --help
+spoolcache config
 ```
 
-That artifact uses the old interface. To render a configuration with a chosen
-cache directory under 0.1.0:
-
-```bash
-export SPOOLCACHE_CONTAINER_ROOT="$HOME/.cache/spoolcache"
-export SPOOLCACHE_DIRECT_IO=required
-python -m spoolcache.vllm.config_json
-```
-
-Use the documentation from the release tag when operating that artifact.
-The [migration table](MIGRATION.md) lists the next interface, which is currently
-unreleased. Do not assume a local source change updated an installed wheel.
+For an older installation, use the documentation from its release tag.
+The [migration table](MIGRATION.md) describes how to update legacy configuration.
+Do not assume a local source change updated an installed wheel.
 
 ## Current checkout
 
-From a checkout containing the current changes, in the intended Python environment:
+For local development, run from the repository root in the intended Python environment:
 
 ```bash
 python -m pip install -e .

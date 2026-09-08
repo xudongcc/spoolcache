@@ -5,10 +5,12 @@ release commits, tags and GitHub assets. PyPI receives the same authenticated
 wheel through Trusted Publishing. A local edit, test or candidate build does not
 publish a package.
 
-The recorded first release is [0.1.0](https://pypi.org/project/spoolcache/0.1.0/).
-Its [G6 evidence](receipts/2026-09-08-g6/README.md) distinguishes the qualified
-candidate, public wheel and installed images. Current interface changes are
-listed in [Migration](MIGRATION.md).
+Published packages are available on [PyPI](https://pypi.org/project/spoolcache/),
+with tags, notes and assets on
+[GitHub Releases](https://github.com/xudongcc/spoolcache/releases).
+The first release's [G6 evidence](receipts/2026-09-08-g6/README.md) distinguishes
+the qualified candidate, public wheel and installed images. Legacy interface
+changes are listed in [Migration](MIGRATION.md).
 
 ## Automated workflow
 

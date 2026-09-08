@@ -1,11 +1,13 @@
 # Migration
 
-The changes below are present in the current checkout and remain unpublished. The recorded release is 0.1.0. Install a
-wheel containing the new interfaces before switching production configuration.
+This guide maps legacy interfaces to the current interface. See
+[GitHub Releases](https://github.com/xudongcc/spoolcache/releases) for release
+history and [Installation](INSTALLATION.md) for published packages. Install a
+wheel containing the required interfaces before switching production configuration.
 
-## Interface changes after 0.1.0
+## Legacy interface changes
 
-| Surface | Published 0.1.0 / previous launchers | Current checkout |
+| Surface | Legacy package / previous launchers | Current interface |
 | --- | --- | --- |
 | Maintenance command | `spoolcache-maintenance` | `spoolcache` |
 | Connector configuration command | `python -m spoolcache.vllm.config_json` | `spoolcache config`; the same renderer supplies validated JSON |
@@ -96,5 +98,4 @@ and quarantine. Do not restore only SQLite state or only object files.
 
 No automatic migration service or implicit cache deletion is provided.
 [Operations](OPERATIONS.md#preserve-and-retire-data) explains safe archival.
-Version calculation remains owned by [python-semantic-release](RELEASE.md);
-this update is classified as a regular `feat` for version calculation.
+Version calculation remains owned by [python-semantic-release](RELEASE.md).

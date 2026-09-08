@@ -44,21 +44,28 @@ for Qwen/GLM; none declared audio in those runs. The Gemma fixture covers audio
 as well. Runtime-enabled modalities are discovered automatically rather than
 looked up in this table.
 
-## Published artifact and local changes
+## Release and qualification evidence
+
+Published versions and artifacts are listed on
+[PyPI](https://pypi.org/project/spoolcache/) and
+[GitHub Releases](https://github.com/xudongcc/spoolcache/releases). The CLI and
+configuration changes described here have been released. The observations below
+identify particular qualification runs; they do not automatically qualify every
+published wheel or later source change.
 
 [G6](receipts/2026-09-08-g6/README.md) qualified an exact candidate and separately
-authenticated the published 0.1.0 wheel in four runtime images on both hosts.
+authenticated the first published wheel in four runtime images on both hosts.
 The qualification carry-forward used equality of package payloads, not merely a
 matching version string.
 
-The current unreleased package was built as an isolated `0.2.0rc1` candidate
-from a committed snapshot of the working tree. Its installed bytes were
-verified on both hosts; the package source still matches the working tree
-except for the candidate's python-semantic-release version stamp. Real vLLM
+The September 8 Gemma regression used an isolated candidate built from a
+committed source snapshot after the interface cleanup. Its installed bytes were
+verified on both hosts. The [candidate receipt](receipts/2026-09-08-current-gemma/README.md)
+records its exact version, source commit and wheel identity. Real vLLM
 0.28.0/CUDA tests completed with 284 passes and one runtime-dependent skip.
 The host suite passed 292 tests and 373 subtests, with 12 runtime-dependent skips.
 
-The new [Gemma regression receipt](receipts/2026-09-08-current-gemma/README.md)
+The [Gemma regression receipt](receipts/2026-09-08-current-gemma/README.md)
 records PP=1 text/image/audio/video/mixed persistence and restart checks, and
 PP=2 testing. An initial PP=2 mixed prompt failed the strict cold-output gate:
 matching cold controls differed from restored output despite matching all-rank
@@ -68,8 +75,10 @@ attributes a reproducible instance to the runtime's prefix-cache computation:
 same-span native GPU caching and disk restore produce identical token
 probabilities, while cold computation differs. The original cold-output gate
 remains strict; a different passing prompt or batch-invariant output does not
-establish universal numerical equivalence. This candidate has
-not been published.
+establish universal numerical equivalence. These live results belong to the
+recorded candidate. Release CI separately validates the actual published wheel;
+carrying live qualification to another artifact requires package-payload and
+installed-image authentication.
 
 Checks cover the two-setting configuration, unchanged 200 GiB capacity,
 fractional sizes, rejected legacy namespace keys, model/salt separation,

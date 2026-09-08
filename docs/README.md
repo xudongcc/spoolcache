@@ -1,8 +1,11 @@
 # Documentation
 
-These guides describe the current SpoolCache source tree. Unreleased CLI,
-configuration and deployment changes are listed in [Migration](MIGRATION.md).
-The recorded published release is 0.1.0; its receipts do not qualify later edits.
+These guides describe the current SpoolCache source tree. Install published
+packages from [PyPI](https://pypi.org/project/spoolcache/) and consult
+[GitHub Releases](https://github.com/xudongcc/spoolcache/releases) for release notes.
+For an older installation, use its release-tag documentation; see
+[Migration](MIGRATION.md) when upgrading. Qualification receipts apply to their
+recorded artifacts, not automatically to later releases or source edits.
 
 ## Start here
 

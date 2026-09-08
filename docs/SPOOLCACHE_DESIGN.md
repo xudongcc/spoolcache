@@ -266,7 +266,7 @@ The request flag `spoolcache.skip_read=true` skips persistent restore admission;
 only literal JSON booleans activate them. Neither changes runtime compatibility,
 background maintenance, or vLLM's own caches.
 `spoolcache_path` defaults to the current user's `~/.cache/spoolcache`; old
-root and I/O-mode settings are removed in the [unreleased migration](MIGRATION.md).
+root and I/O-mode settings are covered in the [migration guide](MIGRATION.md).
 
 The persistent schema names remain `spoolcache-manifest/v1`,
 `spoolcache-manifest-envelope/v1`, `spoolcache-deployment/v2` and

@@ -18,12 +18,14 @@ remains. A documentation rewrite does not complete a goal or qualify new code.
 | Q1 | [-], non-blocking | GLM safe maximum-context qualification and its final receipts remain |
 
 CLI renaming, mandatory `O_DIRECT`, unified `SPOOLCACHE_PATH` and GB-based
-`SPOOLCACHE_MAX_SIZE`, plus removal of the access-mode setting, are current
-unreleased local changes. Independent request-level `spoolcache.skip_read` and
+`SPOOLCACHE_MAX_SIZE`, plus removal of the access-mode setting, are released
+features. Independent request-level `spoolcache.skip_read` and
 `spoolcache.skip_write` flags replace the old bypass; enabling both skips
 persistent reads and writes. Their CPU/launcher checks are recorded in
-[Compatibility](COMPATIBILITY.md#published-artifact-and-local-changes); they do
-not change the historical G6 release artifact.
+[Compatibility](COMPATIBILITY.md#release-and-qualification-evidence). Published
+versions are listed on [PyPI](https://pypi.org/project/spoolcache/) and
+[GitHub Releases](https://github.com/xudongcc/spoolcache/releases). Qualification
+remains scoped to the exact artifacts recorded in each receipt.
 
 ## Permanent constraints
 
@@ -87,7 +89,7 @@ equality and eight final image-install authentications carry the recorded live
 qualification to the public wheel. PP=2 media-oracle and remote-health limits
 remain explicit in those receipts.
 
-## Local namespace simplification
+## Namespace simplification
 
 - [x] Remove `SPOOLCACHE_NAMESPACE` and JSON/Python namespace fields; retain only
   path and capacity settings plus the independent request read/write flags.
@@ -95,10 +97,10 @@ remain explicit in those receipts.
   domains; preserve automatic model/runtime/layout identity and request salts.
 - [x] Update launchers and documentation; retain old cache trees without migration.
 
-These changes remain local and unreleased. CPU checks and qualification limits
-are recorded in [Compatibility](COMPATIBILITY.md#published-artifact-and-local-changes).
+These changes are released. CPU checks and qualification limits are recorded in
+[Compatibility](COMPATIBILITY.md#release-and-qualification-evidence).
 
-## Local protocol residue audit
+## Protocol residue audit
 
 - [x] Trace configuration, per-step metadata, startup/inventory, layout and
   persistent schema consumers; remove the unused per-step metadata schema field.
@@ -111,9 +113,9 @@ are recorded in [Compatibility](COMPATIBILITY.md#published-artifact-and-local-ch
   boundary; preserve historical receipts and removed-option rejection tests.
 
 The [protocol boundaries](SPOOLCACHE_DESIGN.md#internal-protocol-boundaries) document
-which identifiers remain necessary. This cleanup is local and unreleased.
+which identifiers remain necessary. This cleanup is released.
 
-## Local CLI configuration output
+## CLI configuration output
 
 - [x] Add `spoolcache config` using the existing validated environment renderer;
   print compact JSON without starting vLLM or creating cache directories.
@@ -122,7 +124,7 @@ which identifiers remain necessary. This cleanup is local and unreleased.
   retain the existing maintenance request/status contracts.
 
 CLI subprocess tests cover defaults, home expansion, capacity overrides and
-invalid inputs. This addition remains unreleased.
+invalid inputs. This command is available in published packages.
 
 ## Current Gemma regression and fixed e2e runner
 
@@ -142,7 +144,10 @@ successful cases from the initial finding. The follow-up attributes the
 reproduced difference to the runtime caching path; it does not claim that the
 default runtime now guarantees cold/cache output equality. Historical G4/G6 qualification remains
 scoped to its original artifacts. No current package behavior was changed to
-make the live output assertion pass, and this candidate is unreleased.
+make the live output assertion pass. The interface changes have since been
+released; the regression receipts still identify the isolated candidate that was
+tested. Publishing a release does not itself authenticate that wheel in the
+recorded live deployments.
 
 ## Q1 remaining qualification
 

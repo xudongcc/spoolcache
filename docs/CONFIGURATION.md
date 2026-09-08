@@ -75,7 +75,7 @@ For example, 200 GiB per rank is not a 200 GiB total budget for a multi-rank gro
 
 ## Direct JSON
 
-This is the current interface; see [Migration](MIGRATION.md) for 0.1.0:
+This is the current interface; see [Migration](MIGRATION.md) for legacy settings:
 
 ```json
 {
