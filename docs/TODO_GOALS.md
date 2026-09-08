@@ -44,15 +44,15 @@ SpoolCache 比 LMCache 基础路径多做的工作仅来自持久化格式本身
 ```text
 通用 PP=1 基线（G1/G2/G2.1/G3-core，已完成）
     -> G4：PP>1 通用拓扑（已完成）
-         -> G6：0.1 可复现发布与开发态源码同步退场（下一开发目标）
+         -> G6：0.1 可复现发布与开发态源码同步退场（已完成，PyPI 0.1.0 已发布）
 
 Q1：长上下文/部署资格（独立进行，不阻塞 G4/G6）
 
 性能候选池：无活动 Goal；只有基准证明当前路径不满足目标时才重新立项
 ```
 
-当前只剩一个核心开发 Goal：**G6**。Q1 是独立部署资格，不要求新增模型适配代码；原 G5
-已撤销为必做目标。
+G1–G4 和 **G6** 核心开发目标均已完成。Q1 是独立部署资格，不要求新增模型适配代码；
+原 G5 已撤销为必做目标。
 
 ## 0.1 明确不实施
 
@@ -142,7 +142,7 @@ audio、video 和三模态混合请求均完成 bypass=0、进程内 cache reset
 start、整组 restart/status/logs/stop。它只服务 G6 前的开发态源码同步，不恢复已删除的
 supervisor 设计，也不把 Gemma/partition 写入核心代码；G6 仍须让生产部署改用不可变 artifact。
 
-## [-] G6：0.1 可复现发布与开发态同步退场
+## [x] G6：0.1 可复现发布与开发态同步退场
 
 依赖：G4。性能候选池和 Q1 的 24 小时长稳不阻塞 G6。
 
@@ -156,11 +156,19 @@ supervisor 设计，也不把 Gemma/partition 写入核心代码；G6 仍须让�
   并保留 `spoolcache-coordination/v1`。
 - [x] 精简生产配置和环境变量，只保留 root、deployment namespace、access mode、direct-I/O、
   capacity 等实际运维边界；不得加入模型 profile 或独立 engine 配置。
-- [ ] GitHub Actions + python-semantic-release 管理版本/changelog/tag/GitHub Release，
+- [x] GitHub Actions + python-semantic-release 管理版本/changelog/tag/GitHub Release，
   经测试的同一 wheel 使用 PyPI Trusted Publishing 发布；记录首次发布所需的账号侧绑定。
 - [x] 用固定 Gemma revision 完成 release-candidate 可复现安装、PP=1/PP=2 功能与故障回归；
   DeepSeek/Qwen/GLM 只完成兼容性矩阵。
 - [x] 输出支持矩阵、性能/正确性收据、许可证和已知限制；完成最终 code review，无 P1/P2。
+
+完成收据：`docs/receipts/2026-09-08-g6/README.md`。首次发布 workflow `34180558915`
+通过，公开 wheel SHA-256 `abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28`。
+压缩后的初始提交为 `80a19db`；PSR 自动 release commit/tag 为 `40528e6` / `v0.1.0`。
+公开 wheel 的 22 个包文件和 metadata headers 与完成实机资格的候选逐字节相同；最终两节点
+8 份镜像安装认证通过，runtime/live 收据按这项精确 payload 等价证明承接，不以版本字符串
+冒充同一 artifact。PP=2 长 image/mixed 的语义限制、远端故障需要部署端整组停止的限制已
+明确记录；测试结束两节点停止，缓存根目录保留。
 
 已有但不等于 release artifact 的开发证据：root `Dockerfile`/`compose.yaml` 使用官方
 `vllm/vllm-openai:v0.28.0`，Gemma TP=1 全模态收据已通过。G6 不再重复开发这些功能。
@@ -203,5 +211,5 @@ Q1 不改变通用代码范围，也不作为 G4/G6 的依赖。它只补充“�
 | G1–G3-core | 已完成 | 上述提交、code review 和 performance receipts | 通用 TP=1、TP=2(HMA) 基线与持久化闭环 |
 | G4 | 已完成 | G4 Gemma PP=2 收据与 code review | PP×TP 全 participant quorum；PP=1 identity 稳定 |
 | G5 | 已撤销 | 本文件“不实施/候选池” | 不再计入未完成目标 |
-| G6 | 进行中 | `docs/receipts/2026-09-08-g6/` | 不可变安装、发布工作流已实现；本地全部资格通过；待首次 GitHub Actions / PyPI 发布 |
+| G6 | 已完成 | `docs/receipts/2026-09-08-g6/` | PyPI/GitHub 0.1.0 已发布；两节点四种镜像安装同一公开 wheel |
 | Q1 | 进行中、非阻塞 | Qwen/DeepSeek/G3d receipts | 仅剩 GLM 安全最大资格；24 小时项已删除 |

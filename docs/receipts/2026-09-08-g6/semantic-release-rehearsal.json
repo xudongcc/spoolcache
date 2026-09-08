@@ -45,7 +45,12 @@
   "twine_strict": "passed",
   "actionlint_version": "1.7.12",
   "actionlint": "passed",
-  "remote_publication": "pending final live recovery and first workflow run",
+  "remote_publication": {
+    "result": "passed",
+    "github_actions_run": 34180558915,
+    "version": "0.1.0",
+    "receipt": "publication.json"
+  },
   "github_environment": {
     "name": "pypi",
     "allowed_branches": [

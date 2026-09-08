@@ -269,5 +269,26 @@
     "PP=2 long padded image and mixed cold controls stably answered OTHER. These paths prove deterministic complete-output equivalence plus authenticated rank payloads, not semantic classification accuracy; short image control was CATS. Negative experiments are retained.",
     "A remote PP stage exited 70 while the head health endpoint remained successful and the client hung. The final fault observation uses an external deployment-owned whole-group stop after observing worker exit. API readiness is false after that stop and the incomplete stream is rejected. No automatic cross-host supervisor or upstream readiness propagation is claimed."
   ],
-  "result": "passed"
+  "result": "passed",
+  "publication": {
+    "status": "passed",
+    "version": "0.1.0",
+    "receipt": "publication.json",
+    "fresh_pypi_install": "pypi-install.json",
+    "published_images_receipt": "published-installations.json",
+    "qualification_transfer": "All 22 spoolcache package files and METADATA headers match the live-qualified candidate byte for byte; README description/RECORD/ZIP timestamps are the only distribution changes.",
+    "installed_images_on_both_hosts": "passed (8 installations; same public wheel SHA-256)"
+  },
+  "final_service_state": {
+    "head": "absent",
+    "worker": "absent",
+    "api_ready": false,
+    "api": "http://127.0.0.1:8000"
+  },
+  "final_review": {
+    "result": "passed",
+    "unresolved_p1_p2": 0,
+    "python_310_test_assertions": "fixed without runtime code changes; full 3.10/3.11/3.12 GitHub matrix passed",
+    "limitations": "Explicit cold image/mixed semantic and upstream PP head-liveness limitations; see negative-observations.json and docs/RELEASE.md"
+  }
 }

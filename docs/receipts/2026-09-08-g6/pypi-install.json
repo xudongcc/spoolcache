@@ -1,0 +1,8 @@
+{
+  "version": "0.1.0",
+  "index": "https://pypi.org/simple",
+  "download_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28",
+  "verified_installed_files": 27,
+  "status": "passed",
+  "maintenance_cli_help": "passed"
+}

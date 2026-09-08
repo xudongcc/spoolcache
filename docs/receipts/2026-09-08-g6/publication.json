@@ -1,0 +1,23 @@
+{
+  "version": "0.1.0",
+  "project_url": "https://pypi.org/project/spoolcache/",
+  "wheel": "spoolcache-0.1.0-py3-none-any.whl",
+  "wheel_url": "https://files.pythonhosted.org/packages/5e/da/1bff99ff83b82035d1e6660ec2a553c6b444acaf88f18feaacc9aae31da1/spoolcache-0.1.0-py3-none-any.whl",
+  "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28",
+  "uploaded_at": "2026-09-08T02:37:14.688976Z",
+  "github_actions_run": 34180558915,
+  "github_release": "https://github.com/xudongcc/spoolcache/releases/tag/v0.1.0",
+  "release": {
+    "schema": "spoolcache-release/v1",
+    "commit": "40528e685301bd5f45e1332255d69f492b3d8819",
+    "source_date_epoch": 1788834962,
+    "wheel": "spoolcache-0.1.0-py3-none-any.whl",
+    "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28",
+    "build_requires": [
+      "setuptools==80.9.0",
+      "wheel==0.45.1"
+    ]
+  },
+  "pypi_and_actions_artifact_bytes_identical": true,
+  "github_release_and_pypi_bytes_identical": true
+}

@@ -1557,3 +1557,19 @@ supervisor。临时备份只在全量复验后移除；最终两节点停止，�
 GitHub Actions + python-semantic-release + PyPI Trusted Publishing；最终公开 wheel 的 commit
 和 SHA 单独记录，不能用相同 version 字符串冒充相同 artifact。主仓库首次推送前按用户要求
 把所有开发历史压缩为一个 feat commit，旧 commit 只作为本地历史收据保留。
+
+
+发布收尾：51 个旧开发提交压缩为 `80a19db` 一个 `feat:` 初始提交，PSR 自动生成
+`40528e6` / `v0.1.0`。GitHub Actions run `34180558915` 的 Python 3.10/3.11/3.12、
+独立重建、fresh-wheel 安装测试、GitHub Release 和 PyPI Trusted Publishing 均成功。
+Python 3.10 先发现两处旧测试错误地强制要求 3.11 的 exception notes；已改为所有版本
+认证 secondary-error 日志，仅支持 add_note 时额外检查 notes，未修改 runtime 源码。
+
+公开 wheel SHA-256 为 `abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28`。
+GitHub Release、Actions artifact、PyPI 下载三者字节完全一致；全新环境从 PyPI 安装后
+27 个文件与公开 wheel 一致，CLI 正常。公开 wheel 的 22 个 spoolcache package files 与
+候选完全相同，METADATA headers 完全相同；差异仅 README description/RECORD/ZIP timestamps。
+因此通过精确 payload 等价承接上述 runtime/live 资格，未把 version 相同当成 artifact 相同。
+该公开 wheel 已装入两节点的开发/DeepSeek/Qwen/GLM 镜像，8 次安装认证全部通过；三个生产
+env 已选择新 image ID，双机 preflight 通过，最后两节点维持停止且保留缓存。最终发布、安装
+和等价证据在同目录 `publication.json`、`pypi-install.json`、`published-installations.json`。

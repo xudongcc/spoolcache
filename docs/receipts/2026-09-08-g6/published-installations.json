@@ -1,0 +1,188 @@
+{
+  "release": {
+    "schema": "spoolcache-release/v1",
+    "commit": "40528e685301bd5f45e1332255d69f492b3d8819",
+    "source_date_epoch": 1788834962,
+    "wheel": "spoolcache-0.1.0-py3-none-any.whl",
+    "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28",
+    "build_requires": [
+      "setuptools==80.9.0",
+      "wheel==0.45.1"
+    ]
+  },
+  "payload_equivalence": {
+    "package_files_identical": true,
+    "package_file_count": 22,
+    "metadata_headers_identical": true,
+    "changed_zip_members": [
+      "spoolcache-0.1.0.dist-info/METADATA",
+      "spoolcache-0.1.0.dist-info/RECORD"
+    ],
+    "changes_explained_by": "README description/RECORD and ZIP timestamps; every installed spoolcache payload and package requirement is identical",
+    "module_sha256": {
+      "spoolcache/__init__.py": "809a28aec610db7f00c0b2a0e8773521e0280cf1a89ccfdd2d8af78e8c67c0ac",
+      "spoolcache/admission.py": "fcf04b72cd3a7ef341c440d5e341b814f3090f7e5efb5eeaaeab97b80e6321a6",
+      "spoolcache/buffers.py": "1b41c2cff3ba18bdc1ea3afdac117979774f5c48cd36f0e935d33dae56f67873",
+      "spoolcache/config.py": "104ff77370bd81ddec7a32d2d9c8233f9818ea9da40386a99153c371854ab648",
+      "spoolcache/errors.py": "c1018e6ba978cb40671842a775fe7311a0869e134ab81be0cd5a570a35e57381",
+      "spoolcache/event_journal.py": "b00c6287f418b6b804aab055a040dc0cf6f92564ce4d452056f1dc7c98d4c6e2",
+      "spoolcache/fail_stop.py": "7873236d573b61d5527bf968848560cefe8223d116c1b74613c17d2a7dcd2899",
+      "spoolcache/gpu.py": "79176aee7654523f5a0131f7d8a9723e381f63aca628f4410127b28b1e35f969",
+      "spoolcache/hma.py": "3c9fd3f9b7adf1dfa6023ebbe9efd8d0f5f0c1d43f9bfcaab06593499ead8b8c",
+      "spoolcache/identity.py": "5d7d8da595153a265d0f7ca948d693c4dabf281b669539a8e3ab0c515557ec8e",
+      "spoolcache/maintenance.py": "ce6141bdb8c2d609f4a29a6ab263fd78a8debeafb6117903656b6efc676232bc",
+      "spoolcache/manifest.py": "8cc1a1e5a70861aa187257fed3216cb84aac3e4c6c82d4e2fffdf050b126fce2",
+      "spoolcache/prefix.py": "ed8d108165c8fbb171df5fa0fd43288321ccee40e846d5083133667ab9f48e9b",
+      "spoolcache/quorum.py": "903fd7d8a533232c6b3ba87154359a89068c696e5216f644f9ac15f7dfd681b2",
+      "spoolcache/store.py": "c35765c1fc6a41dc65f4c94fcbfcc197ed65f1f6cf3123a22dcb0f41d2d1b6da",
+      "spoolcache/telemetry.py": "cf0c13f23b7ebee7a9f609e8abc12907898c24cbe89d84f373799b162742d6bb",
+      "spoolcache/topology.py": "6a4db2a9baae19c637d64fb5643dd724220f364eaa291bad5bed0bf59748a5e5",
+      "spoolcache/vllm/__init__.py": "2bdee6f8efd4dfcaad1c95da27deec98aaee63698ac142317a08b947843c8bf8",
+      "spoolcache/vllm/compat.py": "eb9ce64eae85257276fff1a66a84a0788e2302cf8dbe8921b0ce42c22f40abd8",
+      "spoolcache/vllm/config_json.py": "df9568e7d344b1abd30eb15b7a1efe4a8712b7e734c5c3a8fd62c91dba83d5ee",
+      "spoolcache/vllm/connector.py": "adc7f09a13c04eea3dbf46756e13b8a16bc11c02c83cf58f23794631420b42ff",
+      "spoolcache/vllm/prometheus.py": "e27e593cacec034ccd8eaabd0bf03c02a1a6660d0b6aa701e796f45e8d47e639"
+    }
+  },
+  "images": [
+    {
+      "target": "deepseek",
+      "image": "spoolcache-deepseek:0.1.0",
+      "image_id": "sha256:ff686c15c0dfd42b498cba653e2b16318196299daa6ea3ff429935cb80987953",
+      "qualified_candidate_base": "sha256:3e59ab5a2b8f73a9ed5389b4799068808fa35a312f4983df44e98a9cee759717",
+      "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+    },
+    {
+      "target": "qwen",
+      "image": "spoolcache-qwen:0.1.0",
+      "image_id": "sha256:d2ec980bb97ddd4bf14ea48f052e1f208dd22e45eb5b053de11179e55cdfec89",
+      "qualified_candidate_base": "sha256:e6fb73b90e3ae63fbc6ebe6d3bb8ddec7ab126beabae578bccb170104c2180a5",
+      "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+    },
+    {
+      "target": "glm",
+      "image": "spoolcache-glm:0.1.0",
+      "image_id": "sha256:269091154be02697e64896abe2f089e1c8227a9bff95d47bc388a167eaa0ff0c",
+      "qualified_candidate_base": "sha256:768243594f78f9e983143aab55f6594131c736e4e730eb5ce91104019c85d81a",
+      "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+    },
+    {
+      "target": "official",
+      "image": "spoolcache-dev:vllm-0.28.0",
+      "image_id": "sha256:a72a4c801a6f4c092473a5fcf2b36b6f8cd8a88c3429c23fc35e5fd2c179e47d",
+      "qualified_candidate_base": "sha256:f17f09d8b6c2622926e1508b0ce3f215101d5958bf407e319b26eb1c2694ffb4",
+      "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+    }
+  ],
+  "installed_on_both_hosts": [
+    {
+      "host": "head",
+      "target": "deepseek",
+      "image_id": "sha256:ff686c15c0dfd42b498cba653e2b16318196299daa6ea3ff429935cb80987953",
+      "installation": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+      }
+    },
+    {
+      "host": "head",
+      "target": "qwen",
+      "image_id": "sha256:d2ec980bb97ddd4bf14ea48f052e1f208dd22e45eb5b053de11179e55cdfec89",
+      "installation": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+      }
+    },
+    {
+      "host": "head",
+      "target": "glm",
+      "image_id": "sha256:269091154be02697e64896abe2f089e1c8227a9bff95d47bc388a167eaa0ff0c",
+      "installation": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+      }
+    },
+    {
+      "host": "head",
+      "target": "official",
+      "image_id": "sha256:a72a4c801a6f4c092473a5fcf2b36b6f8cd8a88c3429c23fc35e5fd2c179e47d",
+      "installation": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+      }
+    },
+    {
+      "host": "worker",
+      "target": "deepseek",
+      "image_id": "sha256:ff686c15c0dfd42b498cba653e2b16318196299daa6ea3ff429935cb80987953",
+      "installation": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+      }
+    },
+    {
+      "host": "worker",
+      "target": "qwen",
+      "image_id": "sha256:d2ec980bb97ddd4bf14ea48f052e1f208dd22e45eb5b053de11179e55cdfec89",
+      "installation": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+      }
+    },
+    {
+      "host": "worker",
+      "target": "glm",
+      "image_id": "sha256:269091154be02697e64896abe2f089e1c8227a9bff95d47bc388a167eaa0ff0c",
+      "installation": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+      }
+    },
+    {
+      "host": "worker",
+      "target": "official",
+      "image_id": "sha256:a72a4c801a6f4c092473a5fcf2b36b6f8cd8a88c3429c23fc35e5fd2c179e47d",
+      "installation": {
+        "import_path": "/usr/local/lib/python3.12/dist-packages/spoolcache/__init__.py",
+        "schema": "spoolcache-install-verification/v1",
+        "status": "passed",
+        "verified_files": 27,
+        "version": "0.1.0",
+        "wheel_sha256": "abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28"
+      }
+    }
+  ],
+  "deployment_environment_images_updated": [
+    "deepseek",
+    "qwen",
+    "glm"
+  ]
+}

@@ -4,7 +4,14 @@
 runtime images, fixed model revision and the PP=1/PP=2 live receipts.
 `semantic-release-rehearsal.json` records isolated PSR version/build/install
 rehearsals; it is not a claim of a remote publication. The final publication
-receipt records GitHub/PyPI bytes separately after the workflow runs.
+receipt `publication.json` records GitHub/PyPI bytes from the successful run
+34180558915. `published-installations.json` binds the public wheel to the final
+four images on both nodes and proves that all SpoolCache package files and
+package metadata headers are identical to the live-qualified candidate. Only
+the README description, its RECORD entry and ZIP timestamps differ; the runtime
+qualification is carried forward by exact package-payload equality, not by the
+version string. Candidate and published image IDs are deliberately recorded
+separately.
 
 The candidate wheel was built from pre-squash commit `93e7ad4`, SHA-256
 `9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b`.

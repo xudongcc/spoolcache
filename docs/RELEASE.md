@@ -1,8 +1,10 @@
 # SpoolCache 0.1 release contract
 
-The current candidate is `0.1.0`. Qualification status is tracked in
-[`TODO_GOALS.md`](TODO_GOALS.md); a candidate is not a completed release until
-the install, runtime, live restore/failure and review receipts all pass.
+`0.1.0` is published on [PyPI](https://pypi.org/project/spoolcache/0.1.0/)
+and [GitHub](https://github.com/xudongcc/spoolcache/releases/tag/v0.1.0).
+The [G6 receipts](receipts/2026-09-08-g6/README.md) distinguish the live-qualified
+candidate from the final public wheel and its installed images. Goal status is
+tracked in [`TODO_GOALS.md`](TODO_GOALS.md).
 
 ## Build once, install the same wheel
 
@@ -27,7 +29,8 @@ releases are serialized, and a stale workflow cannot release a newer untested
 commit. Branch protection must allow the release bot to push version commits;
 do not disable protection or add a broad PAT to work around a rejected push.
 
-Before the first upload, create a
+The first publisher was configured and used successfully on 2026-09-08. For a
+new project, create a
 [pending publisher on PyPI](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/)
 with these exact values:
 
@@ -62,13 +65,18 @@ and `semantic-release publish --tag TAG`; never rebuild and overwrite assets
 of an already released version. A complete rerun after the tag exists is a
 no-op version calculation, not an upload retry.
 
-The local G6 qualification candidate and a later CI-produced release have
-separate commit/SHA receipts. Never treat a shared version string as proof of
-identical artifacts; deploy and qualify the exact downloaded release wheel.
+The local G6 qualification candidate and the CI-produced release have separate
+commit/SHA receipts. The final public wheel was checked against the candidate:
+every SpoolCache package file and all package metadata headers are identical;
+only README description/RECORD bytes and ZIP timestamps differ. This exact
+payload comparison carries the runtime qualification forward; installation
+receipts separately authenticate the public wheel in each final image. Never
+treat a shared version string alone as proof of identical artifacts.
 
 ### Local qualification / reproducibility
 
-From a clean committed checkout, run:
+For a release rebuild, use the clean tagged release checkout (not a later
+documentation commit). For a new candidate, use its clean committed checkout:
 
 ```bash
 python3 scripts/build-release.py --output dist/release
