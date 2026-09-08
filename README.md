@@ -6,6 +6,107 @@ qualification was the fixed DeepSeek-V4 Flash Vision deployment in
 It keeps each runtime-discovered PP x TP worker's cache shard on that machine's
 local NVMe and does not modify the vLLM installation.
 
+## Quick start
+
+[Install](#installation) · [Use with vLLM](#use-with-vllm) ·
+[Develop](#development) · [Operations](#operations) ·
+[Release guide](docs/RELEASE.md)
+
+### Installation
+
+The published version is [SpoolCache 0.1.0](https://pypi.org/project/spoolcache/0.1.0/).
+Install it **in the same Python environment or container as your vLLM server**:
+
+```bash
+python -m pip install spoolcache==0.1.0
+python -c 'import spoolcache; print(spoolcache.__version__)'
+spoolcache-maintenance --help
+```
+
+SpoolCache requires Python 3.10 or newer; CI covers 3.10, 3.11 and 3.12.
+Serving requires Linux, an NVIDIA GPU with a working CUDA/vLLM runtime, and a
+writable persistent cache directory on local storage (NVMe recommended).
+SpoolCache does not install vLLM, PyTorch, CUDA, or model weights. Install and
+verify your vLLM runtime first; for the reproducible development setup, use the
+pinned vLLM 0.28.0 image in [Development](#development).
+The runtime contract is checked at startup; an arbitrary vLLM version is not
+supported merely because the Python package installs successfully.
+
+For distributed serving, install the same wheel in every participant's image.
+Use the immutable wheel and `release.json` from the
+[GitHub release](https://github.com/xudongcc/spoolcache/releases/tag/v0.1.0)
+with [`Dockerfile.release`](Dockerfile.release); the complete build and SHA-256
+verification commands are in [the release guide](docs/RELEASE.md).
+
+### Use with vLLM
+
+SpoolCache runs inside vLLM as a KV connector. There is no separate cache server
+to start. The following single-GPU example uses the qualified Gemma revision;
+obtain access to the model and download its weights first if needed.
+
+Run these commands in the environment where both vLLM and SpoolCache are installed:
+
+```bash
+# Choose an absolute, writable path on persistent local storage.
+export SPOOLCACHE_CONTAINER_ROOT="$HOME/.cache/spoolcache"
+export SPOOLCACHE_NAMESPACE="my-service"
+export SPOOLCACHE_ACCESS_MODE="read-write"
+export SPOOLCACHE_DIRECT_IO="required"
+export SPOOLCACHE_MAX_BYTES=214748364800  # 200 GiB per rank
+mkdir -p "$SPOOLCACHE_CONTAINER_ROOT"
+
+# This baseline uses the normal allocator; expandable_segments:True is unsupported.
+unset PYTORCH_ALLOC_CONF PYTORCH_CUDA_ALLOC_CONF
+export VLLM_SERVER_DEV_MODE=0
+
+KV_CONFIG=$(python -m spoolcache.vllm.config_json)
+vllm serve google/gemma-4-E2B-it \
+  --revision 3e22461f65e89153144f8adb70e3b8c2cc9845a7 \
+  --host 127.0.0.1 --port 8000 \
+  --tensor-parallel-size 1 --pipeline-parallel-size 1 \
+  --max-model-len 16384 --gpu-memory-utilization 0.80 \
+  --enable-prefix-caching --enable-prompt-tokens-details \
+  --kv-transfer-config "$KV_CONFIG"
+```
+
+`spoolcache.vllm.config_json` converts the five environment settings below into
+validated `--kv-transfer-config` JSON, including the external connector module,
+`kv_role=kv_both`, and `kv_load_failure_policy=fail`. Setting environment
+variables alone does not attach the connector; pass the generated JSON to vLLM.
+
+| Environment setting | Meaning |
+| --- | --- |
+| `SPOOLCACHE_CONTAINER_ROOT` | Absolute cache path **as seen by the vLLM process**; mount persistent storage here when using Docker. |
+| `SPOOLCACHE_NAMESPACE` | Operator-chosen deployment namespace; use a different value to isolate deployments. |
+| `SPOOLCACHE_ACCESS_MODE` | `read-write`, `restore-only`, `store-only`, or `disabled`. |
+| `SPOOLCACHE_DIRECT_IO` | `required` enforces `O_DIRECT`; the filesystem must support it. `best-effort` permits a buffered fallback; `disabled` uses buffered I/O. |
+| `SPOOLCACHE_MAX_BYTES` | Managed storage limit in bytes for each rank; background GC targets 90% of this limit. |
+
+SpoolCache creates deployment/rank subdirectories below the root. Keep those
+roots across restarts. A container's writable layer is not persistent cache
+storage; use a bind mount or named volume. See [DSpark deployment](#dspark-deployment)
+for the existing multi-node launchers and their host-path settings.
+
+From another terminal, send an ordinary OpenAI-compatible request:
+
+```bash
+curl --fail http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"google/gemma-4-E2B-it","messages":[{"role":"user","content":"What is 2 + 2?"}],"max_tokens":32,"temperature":0}'
+
+curl --fail http://127.0.0.1:8000/metrics
+```
+
+No SpoolCache-specific request field is needed for normal caching. Reuse requires
+an exact shared prefix under compatible model, revision, namespace and runtime
+identities; a stored prefix must also reach the internal minimum span and a
+runtime-safe boundary. The short request above checks serving only: a nonzero cached-token
+count can come from vLLM's GPU cache. Persistent-hit qualification also requires
+SpoolCache hit/restore logs, all-rank agreement and output/payload verification;
+see [the development checks](#verify-persistent-restores).
+
+## Features and qualified runtimes
+
 Implemented in the current alpha:
 
 - patch-free `KVConnectorBase_V1`/`SupportsHMA` integration;
@@ -122,7 +223,7 @@ not revive either planner or add model-specific profiles.
 Version releases use GitHub Actions + python-semantic-release and PyPI Trusted
 Publishing. See the [release workflow and first-publisher setup](docs/RELEASE.md).
 
-Build one release wheel and install it into every deployment runtime using
+Download one published release wheel and install it into every deployment runtime using
 [`docs/RELEASE.md`](docs/RELEASE.md). Select the resulting immutable image in the
 deployment repository, then enable the connector:
 
@@ -238,9 +339,9 @@ In an isolated lab, starting vLLM with `VLLM_SERVER_DEV_MODE=1` enables a
 GPU-only prefix reset without restarting the model:
 
 ```bash
-PYTHONPATH=src .venv/bin/python benchmarks/reset_gpu_prefix_cache.py
+uv run --locked python benchmarks/reset_gpu_prefix_cache.py
 # For image/video/audio qualification, also clear vLLM's media/encoder caches:
-PYTHONPATH=src .venv/bin/python benchmarks/reset_gpu_prefix_cache.py --multimodal
+uv run --locked python benchmarks/reset_gpu_prefix_cache.py --multimodal
 ```
 
 The helper explicitly keeps `reset_external=false`, so SpoolCache's NVMe
@@ -326,9 +427,9 @@ Operators can inspect progress or request immediate authentication of one
 known entry without enabling a debug endpoint:
 
 ```bash
-PYTHONPATH=src python3 -m spoolcache.maintenance status \
+spoolcache-maintenance status \
   --root /absolute/spoolcache/deployment-digest/rank-0000
-PYTHONPATH=src python3 -m spoolcache.maintenance request \
+spoolcache-maintenance request \
   --root /absolute/spoolcache/deployment-digest/rank-0000 \
   --entry 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 ```
@@ -357,119 +458,181 @@ deleted as part of ordinary recovery.
 
 ## Development
 
-Outstanding work is tracked in [`docs/TODO_GOALS.md`](docs/TODO_GOALS.md).
-That checklist is the durable source for goal status, dependencies, acceptance
-criteria, and completion receipts; update it when a goal is completed rather
-than leaving the result only in a discussion or commit message.
+### Set up a checkout and run CPU tests
 
-Use `google/gemma-4-E2B-it` for every development or test path that needs a
-real model, except compatibility work, which must retain the DeepSeek/Qwen/GLM
-matrix. Pin the Hugging Face revision in each machine-readable receipt. Do not
-substitute the development-model choice for vLLM runtime discovery.
-
-Host-side tests use a lightweight `uv` development group. They deliberately do
-not install vLLM, Torch, or CUDA into `.venv`:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), Git and
+Python 3.12 (uv can provision the interpreter), then work from the repository root:
 
 ```bash
-uv sync --group dev
-PYTHONPATH=src .venv/bin/python -m pytest -q
+git clone https://github.com/xudongcc/spoolcache.git
+cd spoolcache
+git switch -c dev/my-change
+uv sync --python 3.12 --locked --group dev
+uv run --locked pytest -q
+
+# Run a focused suite while changing storage behavior:
+uv run --locked pytest tests/test_manifest_store.py -q
 ```
 
-Real-model development uses the root [`Dockerfile`](Dockerfile) and
-[`compose.yaml`](compose.yaml). The image extends the official
-`vllm/vllm-openai:v0.28.0` multi-architecture image at the pinned digest in the
-Dockerfile, installs SpoolCache and the four optional audio decoder/resampler
-packages without resolving or replacing vLLM's compiled
-dependencies, and loads the connector through `kv_connector_module_path`.
-The Compose baseline serves TP=1/PP=1 on port 8000 with a 16,384-token context;
-long-context and distributed topology qualification use their dedicated safe
-harnesses instead of silently changing this daily-development baseline. Since
-this Compose file is development-only, it always sets
-`VLLM_LOGGING_LEVEL=DEBUG` and `VLLM_SERVER_DEV_MODE=1`.
-The latter exposes vLLM's development-only `POST /reset_prefix_cache`,
-`POST /reset_mm_cache`, and `POST /reset_encoder_cache` routes; it is not a
-SpoolCache production-management API.
+`uv sync` installs the project in editable mode for local development. Changes
+under `src/spoolcache` are visible to host tests without setting `PYTHONPATH`.
+The dev group supplies pytest and the Hugging Face CLI; it does not install
+vLLM, Torch or CUDA. Runtime/CUDA tests skip when those dependencies are absent.
+CI also runs `python -m unittest discover -s tests -v` on Python 3.10–3.12.
+
+Read [`docs/SPOOLCACHE_DESIGN.md`](docs/SPOOLCACHE_DESIGN.md) before changing
+cache semantics, and use [`docs/TODO_GOALS.md`](docs/TODO_GOALS.md) for planned
+work and acceptance criteria. Project-specific development rules are in
+[the development skill](.agents/skills/spoolcache-development/SKILL.md).
+Real-model feature, correctness and fault tests use `google/gemma-4-E2B-it` at
+revision `3e22461f65e89153144f8adb70e3b8c2cc9845a7`; DeepSeek/Qwen/GLM are the
+separate runtime-compatibility matrix. This test policy never enters connector
+model selection or admission logic.
+
+### Build a wheel and a GPU development image
+
+GPU development additionally needs Docker Engine with Compose GPU support,
+NVIDIA Container Toolkit, enough GPU memory for the model, and local persistent
+storage. The root [`Dockerfile`](Dockerfile) pins the official vLLM 0.28.0 image
+by digest and adds SpoolCache plus optional audio decoders without replacing the
+vLLM/Torch/CUDA stack. Serving always imports the wheel installed in the image.
+
+After editing and testing, commit your changes locally using a Conventional
+Commit. The candidate builder requires a clean tree, including untracked files,
+and an empty output directory. Use a fresh path for each build:
 
 ```bash
-.venv/bin/hf download google/gemma-4-E2B-it \
-  --revision 3e22461f65e89153144f8adb70e3b8c2cc9845a7
-# First build/export the wheel path, SHA-256 and commit per docs/RELEASE.md.
+# Stage your intended changes and commit them before running the builder.
+# Example commit message: feat: support the new runtime contract
+CANDIDATE_DIR="dist/candidate-$(git rev-parse --short HEAD)"
+uv run --locked python scripts/build-release.py --output "$CANDIDATE_DIR"
+
+# Keep these exports in the same shell for subsequent Compose commands.
+export SPOOLCACHE_WHEEL="$CANDIDATE_DIR/$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["wheel"])' "$CANDIDATE_DIR/release.json")"
+export SPOOLCACHE_WHEEL_SHA256="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["wheel_sha256"])' "$CANDIDATE_DIR/release.json")"
+export SPOOLCACHE_COMMIT="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["commit"])' "$CANDIDATE_DIR/release.json")"
+
 docker compose build vllm
+```
+
+The wheel path must be relative to the repository's Docker build context.
+`release.json` binds its SHA-256 to the source commit. Local candidate artifacts
+belong to isolated development caches; they do not replace an already published
+version. python-semantic-release stamps the next version in CI before building
+the public artifact.
+To reproduce a published wheel, build from its exact release tag as described
+in [the release guide](docs/RELEASE.md).
+
+Rebuild the wheel and image after code changes, then recreate the container with
+`docker compose up -d --force-recreate vllm`. A restart alone keeps the installed
+package. Retain the three `SPOOLCACHE_*` build exports even for Compose `ps`,
+`run` and `down`, because Compose validates build-argument interpolation.
+
+### Run the single-GPU Gemma development server
+
+Set `HF_HOME` to the host cache path before downloading. Compose mounts this
+path read-only into the container and runs with `HF_HUB_OFFLINE=1`, so the pinned
+snapshot must already be present. If model access requires authentication,
+complete the model's access process and run `uv run --locked hf auth login` first.
+
+```bash
+export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
+uv run --locked hf download google/gemma-4-E2B-it \
+  --revision 3e22461f65e89153144f8adb70e3b8c2cc9845a7
+
 docker compose up -d vllm
 docker compose ps
+docker compose logs -f vllm
+# After startup completes, run in another terminal:
 curl --fail http://127.0.0.1:8000/health
+
+# Stop/remove containers while retaining the named cache volume:
+docker compose down
 ```
 
-Only one model service should use a DGX Spark GPU at a time. Stop the currently
-active lab deployment before `docker compose up`; `docker compose down` stops
-this development service but retains the named SpoolCache volume. The host
-Hugging Face cache is mounted read-only and defaults to
-`/root/.cache/huggingface`; set the standard `HF_HOME` Compose variable only
-when the host cache lives elsewhere. Serving imports the wheel installed in
-the image. Build and qualify a new release wheel/image to test code changes;
-a restart never overlays a mutable source checkout.
+Use Ctrl+C to stop following logs; the server keeps running. Run subsequent
+Compose commands in the shell containing the wheel build exports.
 
-For two-node PP development, use
-[`scripts/gemma-pp2-dev.sh`](scripts/gemma-pp2-dev.sh). It fixes the qualified
-Gemma revision, TP=1/PP=2 layout, vLLM development image and cache policy while
-leaving host paths and CX-7 wiring in the optional ignored
-`.env.gemma-pp2`. `start` first rejects occupied GPUs or a mismatched
-image/model, uses the same wheel installed in the image on both hosts, starts the
-worker stage before the head stage, and waits for `/health`. It is a launcher,
-not a SpoolCache supervisor; failed startup removes the incomplete pair, while
-ordinary `stop` retains both NVMe cache roots.
+This baseline uses TP=1/PP=1, port 8000 and a 16,384-token context. Use one model
+service per lab GPU at a time. The Compose service sets debug logging and
+`VLLM_SERVER_DEV_MODE=1`, exposing reset/RPC/debug endpoints on the host network;
+run it only in an isolated development environment. Production launchers keep
+these endpoints disabled. `docker compose down -v` would delete the cache
+volume; omit `-v` for ordinary stops, restarts and recovery.
+
+### Verify persistent restores
+
+With the development server running, reset only process-local GPU/media caches:
 
 ```bash
-# Only needed when this node's wiring/paths differ from the checked-in defaults.
+uv run --locked python benchmarks/reset_gpu_prefix_cache.py \
+  --api http://127.0.0.1:8000 --multimodal
+```
+
+The helper keeps `reset_external=false`, preserving SpoolCache's NVMe entries.
+A reset or HTTP 200 is not a persistence test by itself. Follow the
+[qualification procedure](.agents/skills/spoolcache-development/references/live-lab.md):
+establish two disjoint cold bypass controls, store an exact shared prefix,
+reset local caches, restore, then restart the whole group and repeat. Check
+cached-token spans, the same entry on every rank, authenticated payloads and
+complete output equality. The [G6 receipts](docs/receipts/2026-09-08-g6/README.md)
+include tested examples and known model/runtime limitations.
+
+To run runtime contracts without starting an API server, first stop the model
+service so the test container has the GPU to itself:
+
+```bash
+docker compose stop vllm
+docker compose run --rm --no-deps -w /opt/spoolcache --entrypoint python3 vllm \
+  -m unittest -v tests.test_hma tests.test_vllm_contract \
+  tests.test_vllm_cache_semantics_runtime \
+  tests.test_vllm_model_namespace_runtime tests.test_vllm_pp_runtime
+```
+
+### Run the two-node PP development harness
+
+[`scripts/gemma-pp2-dev.sh`](scripts/gemma-pp2-dev.sh) targets the two-DGX-Spark
+CX-7 lab, with passwordless SSH, Docker/GPU access and RDMA devices on both
+hosts. It is not a generic multi-node installer. Stop the single-node Compose
+service first. The harness fixes Gemma's revision, TP=1/PP=2 and the qualified
+`12,23` partition; only host paths and fabric settings are configurable.
+
+```bash
+# Optional: copy once and edit for your lab's paths, addresses and interfaces.
 cp scripts/gemma-pp2-dev.env.example .env.gemma-pp2
 
-# Build/download locally first. These explicit transfers use the worker's CX-7
-# SSH address and are only needed when the worker is missing that exact input.
-# First build/export the wheel path, SHA-256 and commit per docs/RELEASE.md.
-docker compose build vllm
+# After the wheel/image build and model download above:
 scripts/gemma-pp2-dev.sh image-sync
 scripts/gemma-pp2-dev.sh model-sync
-
 scripts/gemma-pp2-dev.sh preflight
 scripts/gemma-pp2-dev.sh start
 scripts/gemma-pp2-dev.sh status
 scripts/gemma-pp2-dev.sh logs worker
-scripts/gemma-pp2-dev.sh restart  # complete PP group; persistent roots remain
+scripts/gemma-pp2-dev.sh restart
 scripts/gemma-pp2-dev.sh stop
 ```
 
-The `12,23` PP partition is a test-harness fact for this pinned Gemma/vLLM
-pair, already validated without SpoolCache. It is not a model profile,
-allowlist, or runtime default in `src/spoolcache`. Use DeepSeek/Qwen/GLM only
-for the separate compatibility matrix through their own deployment launchers.
+Set `GEMMA_HEAD_HF_HOME` in `.env.gemma-pp2` to the download's `HF_HOME` when it
+differs from `/root/.cache/huggingface`. Each participant needs the same image
+ID and pinned model snapshot. The worker starts first; failed startup removes
+the incomplete group and ordinary stops retain both cache roots. A remote PP
+worker failure can leave the head `/health` responding: observe every rank and
+recover the complete group. This launcher does not provide automatic supervision.
 
-Development mode exposes vLLM's cache-reset endpoints. To prove an external
-restore without deleting the named SpoolCache volume, reset only process-local
-caches and explicitly keep the external cache:
+### Contribute and release
 
-```bash
-PYTHONPATH=src .venv/bin/python benchmarks/reset_gpu_prefix_cache.py \
-  --api http://127.0.0.1:8000 --multimodal
-```
+Use Conventional Commits: `feat:` for features, `fix:` for fixes, and `docs:` or
+`test:` for documentation/tests. Push your branch and open a pull request;
+include relevant tests and, for GPU/runtime changes, qualification receipts.
+Keep vLLM unpatched and keep model-specific rules out of `src/spoolcache`.
 
-Treat HTTP success only as proof that vLLM accepted the reset. A SpoolCache hit
-still requires cached-token, all-rank entry/span, payload, and output-oracle
-evidence.
-
-Run the real-runtime contract subset without starting the API server:
-
-```bash
-docker compose run --rm --no-deps -w /opt/spoolcache --entrypoint python3 vllm \
-  -m unittest -v tests.test_hma tests.test_vllm_contract \
-  tests.test_vllm_cache_semantics_runtime \
-  tests.test_vllm_model_namespace_runtime
-```
-
-CUDA mover tests run automatically when CUDA Torch is available and otherwise
-skip. See [`docs/SPOOLCACHE_DESIGN.md`](docs/SPOOLCACHE_DESIGN.md) for the
-format, failure semantics, qualification receipt, and remaining work.
-Project-specific agent instructions live in
-[`spoolcache-development`](.agents/skills/spoolcache-development/SKILL.md).
+After changes reach `main`, GitHub Actions runs the test matrix, and
+python-semantic-release updates versions, `uv.lock`, changelog and tags when a
+release is due. The workflow verifies reproducible builds and a fresh wheel
+installation, then publishes the same wheel to GitHub Releases and PyPI through
+Trusted Publishing. Documentation/test-only changes do not bump the version.
+Do not hand-edit release versions or tags; see [the release guide](docs/RELEASE.md)
+for release policy and retry procedures.
 
 ## Performance probes
 
