@@ -5,6 +5,7 @@ import contextlib
 import enum
 import importlib
 import json
+import pickle
 import sys
 import tempfile
 import threading
@@ -15,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from unittest.mock import patch
 
-from spoolcache.errors import UnsupportedRuntimeError
+from spoolcache.errors import ConfigurationError, UnsupportedRuntimeError
 from spoolcache.maintenance import ScrubShutdownReport
 from spoolcache.quorum import (
     InventoryCheckpoint,
@@ -564,7 +565,7 @@ class VLLMContractTests(unittest.TestCase):
             )
         )
 
-    def test_external_connector_loads_and_noops_only_when_disabled(self) -> None:
+    def test_external_connector_enables_data_path_and_preserves_contracts(self) -> None:
         base_module_name = "vllm.distributed.kv_transfer.kv_connector.v1.base"
         stub_vllm = types.ModuleType("vllm")
         stub_vllm.__version__ = "runtime-test"
@@ -637,9 +638,7 @@ class VLLMContractTests(unittest.TestCase):
 
         class TransferConfig:
             kv_connector_extra_config = {
-                "spoolcache_root": "/tmp/spoolcache-contract-test",
-                "spoolcache_access_mode": "disabled",
-                "spoolcache_direct_io": "disabled",
+                "spoolcache_path": "/tmp/spoolcache-contract-test",
             }
 
         vllm_config = types.SimpleNamespace(
@@ -667,6 +666,16 @@ class VLLMContractTests(unittest.TestCase):
         with patch.dict(sys.modules, modules):
             sys.modules.pop("spoolcache.vllm.connector", None)
             connector_module = importlib.import_module("spoolcache.vllm.connector")
+            # Per-step metadata transports plans through vLLM. It has no
+            # independent schema negotiation or persisted representation.
+            plan = connector_module.SpoolCachePlan(
+                request_id="metadata-roundtrip", entry_id="e" * 64,
+                span_tokens=1024, block_ids_by_group=((0, 2), (3,)),
+            )
+            metadata = connector_module.SpoolCacheMetadata(loads=(plan,), stores=(plan,))
+            self.assertEqual(pickle.loads(pickle.dumps(metadata)), metadata)
+            with self.assertRaises(TypeError):
+                connector_module.SpoolCacheMetadata(schema="unused")
             get_spec_kind_resolver = connector_module._get_public_spec_kind_resolver
             self.assertIs(
                 get_spec_kind_resolver(),
@@ -688,7 +697,8 @@ class VLLMContractTests(unittest.TestCase):
                 lambda spec: getattr(spec, "public_kind", "unknown")
             )
             choose_store_span = connector_module._pre_forward_store_span
-            bypasses_spoolcache = connector_module._request_bypasses_spoolcache
+            skips_write = connector_module._request_skips_write
+            skips_read = connector_module._request_skips_read
             normalize_block_ids = connector_module._normalize_block_ids
             nonnegative_runtime_int = connector_module._nonnegative_runtime_int
             request_cache_salt = connector_module._request_cache_salt
@@ -725,20 +735,35 @@ class VLLMContractTests(unittest.TestCase):
                         )
                     )
             self.assertTrue(
-                bypasses_spoolcache(
+                skips_write(
                     types.SimpleNamespace(
-                        kv_transfer_params={"spoolcache_bypass": True}
+                        kv_transfer_params={"spoolcache.skip_write": True}
                     )
                 )
             )
             self.assertFalse(
-                bypasses_spoolcache(
+                skips_write(
                     types.SimpleNamespace(
-                        kv_transfer_params={"spoolcache_bypass": "true"}
+                        kv_transfer_params={"spoolcache.skip_write": "true"}
                     )
                 )
             )
-            self.assertFalse(bypasses_spoolcache(types.SimpleNamespace()))
+            self.assertFalse(skips_write(types.SimpleNamespace()))
+            self.assertTrue(skips_read(types.SimpleNamespace(
+                kv_transfer_params={"spoolcache.skip_read": True}
+            )))
+            for value in (False, 0, 1, "true", None):
+                self.assertFalse(skips_read(types.SimpleNamespace(
+                    kv_transfer_params={"spoolcache.skip_read": value}
+                )))
+            self.assertFalse(skips_read(types.SimpleNamespace()))
+            for value in (False, 0, 1, "true", None):
+                self.assertFalse(skips_write(types.SimpleNamespace(
+                    kv_transfer_params={"spoolcache.skip_write": value}
+                )))
+            self.assertFalse(skips_write(types.SimpleNamespace(
+                kv_transfer_params={"spoolcache_bypass": True}
+            )))
             self.assertEqual(
                 runtime_worker_coordinate(
                     vllm_config=types.SimpleNamespace(
@@ -1010,9 +1035,22 @@ class VLLMContractTests(unittest.TestCase):
                 ),
                 frozenset(),
             )
-            connector = connector_module.SpoolCacheConnector(
-                vllm_config, KVConnectorRole.SCHEDULER, cache_config()
+            with patch.object(connector_module, "require_qualified_allocator") as allocator_gate:
+                connector = connector_module.SpoolCacheConnector(
+                    vllm_config, KVConnectorRole.SCHEDULER, cache_config()
+                )
+                allocator_gate.assert_called_once_with()
+            store_plan = connector_module.SpoolCachePlan(
+                request_id="default-store", entry_id="a" * 64,
+                span_tokens=1024, block_ids_by_group=(),
             )
+            with patch.object(connector, "_track_new_requests", return_value=[store_plan]), patch.object(
+                connector, "_track_cached_requests", return_value=[]
+            ):
+                metadata = connector.build_connector_meta(
+                    types.SimpleNamespace(finished_req_ids=())
+                )
+                self.assertEqual(metadata.stores, (store_plan,))
             self.assertIsInstance(connector, SupportsHMA)
             self.assertEqual(connector._multimodal_modalities, frozenset())
             initial_stats = connector.get_kv_connector_stats()
@@ -1571,16 +1609,7 @@ class VLLMContractTests(unittest.TestCase):
             self.assertEqual(capacity_reporter.replacements, [{}])
             self.assertEqual(capacity_scheduler.force_withdrawal, [True])
 
-            original_config = connector.config
             original_catalog = connector._catalog
-            connector.config = connector_module.SpoolCacheConfig.from_mapping(
-                {
-                    "spoolcache_root": "/tmp/spoolcache-contract-test",
-                    "spoolcache_access_mode": "restore-only",
-                    "spoolcache_direct_io": "disabled",
-                }
-            )
-
             class AlwaysHitCatalog:
                 def longest(self, _candidates):
                     return 1024, "e" * 64
@@ -1640,8 +1669,73 @@ class VLLMContractTests(unittest.TestCase):
             )
             connector._need_load.clear()
             connector._pending_loads.clear()
-            connector.config = original_config
             connector._catalog = original_catalog
+
+            skip_request = types.SimpleNamespace(
+                **{**vars(waiting_request), "request_id": "skip-write",
+                   "kv_transfer_params": {"spoolcache.skip_write": True}},
+            )
+            connector.on_new_request(skip_request)
+            with patch.object(connector, "_catalog", AlwaysHitCatalog()):
+                self.assertEqual(connector.get_num_new_matched_tokens(skip_request, 0), (1024, False))
+            self.assertIn("skip-write", connector._need_load)
+            connector._need_load.clear()
+            restore_plan = connector_module.SpoolCachePlan(
+                request_id="skip-write", entry_id="e" * 64,
+                span_tokens=1024, block_ids_by_group=(),
+            )
+            connector._pending_loads["skip-write"] = restore_plan
+            # A skip-write request must retain its restore plan and be skipped
+            # before store-side token/page access, even with default config.
+            metadata = connector.build_connector_meta(types.SimpleNamespace(
+                finished_req_ids=(),
+                scheduled_new_reqs=[types.SimpleNamespace(req_id="skip-write")],
+                scheduled_cached_reqs=types.SimpleNamespace(req_ids=()),
+            ))
+            self.assertEqual(metadata.loads, (restore_plan,))
+            self.assertEqual(metadata.stores, ())
+            connector.build_connector_meta(types.SimpleNamespace(
+                finished_req_ids=("skip-write",), scheduled_new_reqs=(),
+                scheduled_cached_reqs=types.SimpleNamespace(req_ids=()),
+            ))
+            self.assertNotIn("skip-write", connector._skip_write_requests)
+
+            for skip_write in (False, True):
+                with self.subTest(skip_read=True, skip_write=skip_write):
+                    read_request = types.SimpleNamespace(
+                        **{**vars(waiting_request), "request_id": "skip-read",
+                           "kv_transfer_params": {
+                               "spoolcache.skip_read": True,
+                               "spoolcache.skip_write": skip_write,
+                           }},
+                    )
+                    connector.on_new_request(read_request)
+                    with patch.object(connector, "_catalog") as catalog:
+                        catalog.longest.return_value = (1024, "e" * 64)
+                        catalog.has_quorum.return_value = False
+                        self.assertEqual(
+                            connector.get_num_new_matched_tokens(read_request, 0),
+                            (0, False),
+                        )
+                        catalog.longest.assert_not_called()
+                        self.assertNotIn("skip-read", connector._need_load)
+                        new_request = types.SimpleNamespace(
+                            req_id="skip-read", prompt_token_ids=[1] * 1025,
+                            block_ids=(), num_computed_tokens=1024,
+                        )
+                        with patch.object(connector, "_plan_from_progress", return_value=store_plan):
+                            result = connector.build_connector_meta(types.SimpleNamespace(
+                                finished_req_ids=(), scheduled_new_reqs=[new_request],
+                                scheduled_cached_reqs=types.SimpleNamespace(req_ids=()),
+                                num_scheduled_tokens={"skip-read": 1},
+                            ))
+                        self.assertEqual(result.loads, ())
+                        self.assertEqual(result.stores, () if skip_write else (store_plan,))
+                    connector.build_connector_meta(types.SimpleNamespace(
+                        finished_req_ids=("skip-read",), scheduled_new_reqs=(),
+                        scheduled_cached_reqs=types.SimpleNamespace(req_ids=()),
+                    ))
+                    self.assertNotIn("skip-read", connector._skip_write_requests)
 
             # The live vLLM runtime materializes ModelConfig differently in
             # scheduler and worker processes.  That role-local difference must
@@ -1755,13 +1849,10 @@ class VLLMContractTests(unittest.TestCase):
                     "kv_transfer_config": namespaced_transfer,
                 }
             )
-            namespaced_connector = connector_module.SpoolCacheConnector(
-                namespaced_config, KVConnectorRole.SCHEDULER, cache_config()
-            )
-            self.assertNotEqual(
-                connector._coordination_digest,
-                namespaced_connector._coordination_digest,
-            )
+            with self.assertRaisesRegex(ConfigurationError, "unknown SpoolCache setting"):
+                connector_module.SpoolCacheConnector(
+                    namespaced_config, KVConnectorRole.SCHEDULER, cache_config()
+                )
 
             def identity_with(
                 *, processor_size: int, attention_backend: str

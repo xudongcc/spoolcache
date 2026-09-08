@@ -82,7 +82,7 @@ class MultimodalBenchmarkTests(unittest.TestCase):
         self.assertEqual(part["type"], "video_url")
         self.assertNotIn(str(path), str(part))
 
-    def test_bypass_is_exact_boolean_and_opt_in(self) -> None:
+    def test_skip_write_is_exact_boolean_and_opt_in(self) -> None:
         arguments = dict(
             model="model",
             media_part={"type": "image_url", "image_url": {"url": "data:x"}},
@@ -93,10 +93,19 @@ class MultimodalBenchmarkTests(unittest.TestCase):
             cache_salt="salt",
             phase="consumer",
         )
-        normal = _request_body(**arguments, bypass=False)
-        bypass = _request_body(**arguments, bypass=True)
+        normal = _request_body(**arguments, skip_write=False)
+        skip_write = _request_body(**arguments, skip_write=True)
         self.assertNotIn("kv_transfer_params", normal)
-        self.assertIs(bypass["kv_transfer_params"]["spoolcache_bypass"], True)
+        for skip_read_flag, skip_write_flag in ((False, False), (False, True), (True, False), (True, True)):
+            with self.subTest(skip_read=skip_read_flag, skip_write=skip_write_flag):
+                body = _request_body(**arguments, skip_read=skip_read_flag, skip_write=skip_write_flag)
+                expected = {}
+                if skip_read_flag:
+                    expected["spoolcache.skip_read"] = True
+                if skip_write_flag:
+                    expected["spoolcache.skip_write"] = True
+                self.assertEqual(body.get("kv_transfer_params", {}), expected)
+        self.assertIs(skip_write["kv_transfer_params"]["spoolcache.skip_write"], True)
         self.assertEqual(normal["structured_outputs"], {"choice": ["A", "B"]})
         self.assertEqual(
             normal["chat_template_kwargs"],
@@ -112,7 +121,7 @@ class MultimodalBenchmarkTests(unittest.TestCase):
             padding=" x",
             labels="A, B",
             cache_salt="salt",
-            bypass=False,
+            skip_write=False,
         )
         producer = _request_body(**common, phase="producer")
         consumer = _request_body(**common, phase="consumer")
@@ -134,7 +143,7 @@ class MultimodalBenchmarkTests(unittest.TestCase):
             padding="",
             labels="ALL, OTHER",
             cache_salt="salt",
-            bypass=False,
+            skip_write=False,
         )
         producer = _request_body(**common, phase="producer")
         consumer = _request_body(**common, phase="consumer")
@@ -153,7 +162,7 @@ class MultimodalBenchmarkTests(unittest.TestCase):
             padding=" x",
             labels="A, B",
             cache_salt="salt",
-            bypass=False,
+            skip_write=False,
         )
         producer = _request_body(**common, phase="producer")
         consumer = _request_body(

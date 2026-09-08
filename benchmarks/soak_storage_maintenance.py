@@ -16,7 +16,6 @@ import tracemalloc
 from pathlib import Path
 from typing import Any, Callable
 
-from spoolcache.config import DirectIOMode
 from spoolcache.maintenance import DeepScrubber
 from spoolcache.store import ManifestStore, ObjectSource
 
@@ -208,7 +207,6 @@ def _open_store(
         root,
         slot_bytes=4096,
         slot_count=2,
-        direct_io=DirectIOMode.DISABLED,
         expected_deployment_digest=DEPLOYMENT,
         expected_rank_digest=RANK_IDENTITY,
         expected_rank=0,

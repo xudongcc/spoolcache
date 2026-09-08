@@ -125,9 +125,7 @@ class PrometheusExporterTests(unittest.TestCase):
             ),
             kv_transfer_config=types.SimpleNamespace(
                 kv_connector_extra_config={
-                    "spoolcache_root": "/var/lib/spoolcache",
-                    "spoolcache_access_mode": "read-write",
-                    "spoolcache_direct_io": "required",
+                    "spoolcache_path": "/var/lib/spoolcache",
                 }
             ),
         )

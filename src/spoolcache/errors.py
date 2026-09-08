@@ -18,7 +18,7 @@ class ManifestError(SpoolCacheError, ValueError):
 
 
 class LayoutError(SpoolCacheError, ValueError):
-    """The runtime HMA layout differs from the selected strict profile."""
+    """The discovered HMA layout or its page ownership is invalid."""
 
 
 class ObjectCorruptionError(ManifestError):
@@ -30,7 +30,7 @@ class StoreBusyError(SpoolCacheError):
 
 
 class UnsupportedRuntimeError(SpoolCacheError):
-    """The active vLLM/model runtime is not qualified."""
+    """The active vLLM runtime does not satisfy the required public contracts."""
 
 
 class FatalRestoreError(SpoolCacheError):

@@ -24,8 +24,7 @@ readonly API_PORT="8000"
 readonly MASTER_PORT="29532"
 readonly HEAD_CONTAINER="spoolcache-gemma-pp2-head"
 readonly WORKER_CONTAINER="spoolcache-gemma-pp2-worker"
-readonly CACHE_NAMESPACE="gemma4-e2b-development-pp2"
-readonly CACHE_MAX_BYTES="214748364800"
+readonly CACHE_MAX_SIZE="200"
 readonly CONTAINER_HF_HOME="/root/.cache/huggingface"
 readonly CONTAINER_CACHE_ROOT="/var/lib/spoolcache"
 
@@ -36,8 +35,7 @@ GEMMA_WORKER_IP="${GEMMA_WORKER_IP:-10.100.216.2}"
 GEMMA_WORKER_SSH="${GEMMA_WORKER_SSH:-$GEMMA_WORKER_IP}"
 GEMMA_HEAD_HF_HOME="${GEMMA_HEAD_HF_HOME:-/root/.cache/huggingface}"
 GEMMA_WORKER_HF_HOME="${GEMMA_WORKER_HF_HOME:-/root/.cache/huggingface}"
-GEMMA_HEAD_CACHE_ROOT="${GEMMA_HEAD_CACHE_ROOT:-/var/tmp/spoolcache-gemma-pp2}"
-GEMMA_WORKER_CACHE_ROOT="${GEMMA_WORKER_CACHE_ROOT:-/var/tmp/spoolcache-gemma-pp2}"
+SPOOLCACHE_PATH="${SPOOLCACHE_PATH-~/.cache/spoolcache}"
 GEMMA_HEAD_GLOO_IFACE="${GEMMA_HEAD_GLOO_IFACE:-enp1s0f1np1}"
 GEMMA_WORKER_GLOO_IFACE="${GEMMA_WORKER_GLOO_IFACE:-enp1s0f1np1}"
 GEMMA_HEAD_NCCL_IFACES="${GEMMA_HEAD_NCCL_IFACES:-=enp1s0f1np1,enP2p1s0f1np1}"
@@ -88,6 +86,20 @@ remote_exec() {
     ssh -o BatchMode=yes -o ConnectTimeout=10 "$GEMMA_WORKER_SSH" "$remote_command"
 }
 
+# Resolve the same setting against each host's home before building Docker args.
+spoolcache_host_path() {
+    local value="$1" user_home="$2"
+    case "$value" in
+        "~/"*) value="$user_home/${value:2}" ;;
+    esac
+    # These launchers embed bind mounts in shell command strings.
+    [[ "$value" =~ ^/[a-zA-Z0-9_./-]+$ && "$value" != "/" ]] || {
+        printf '%s\n' "SPOOLCACHE_PATH must be an absolute path without spaces or shell metacharacters" >&2
+        return 2
+    }
+    printf '%s\n' "$value"
+}
+
 validate_host_path() {
     local label="$1"
     local value="$2"
@@ -103,8 +115,7 @@ validate_configuration() {
         || fail "GEMMA_NCCL_GID_INDEX must be a non-negative integer"
     validate_host_path GEMMA_HEAD_HF_HOME "$GEMMA_HEAD_HF_HOME"
     validate_host_path GEMMA_WORKER_HF_HOME "$GEMMA_WORKER_HF_HOME"
-    validate_host_path GEMMA_HEAD_CACHE_ROOT "$GEMMA_HEAD_CACHE_ROOT"
-    validate_host_path GEMMA_WORKER_CACHE_ROOT "$GEMMA_WORKER_CACHE_ROOT"
+    spoolcache_host_path "$SPOOLCACHE_PATH" "$HOME" >/dev/null
 }
 
 container_state_local() {
@@ -285,7 +296,7 @@ docker_args() {
     local container_name="$8"
     local -n output="$9"
     local kv_config
-    kv_config="{\"kv_connector\":\"SpoolCacheConnector\",\"kv_role\":\"kv_both\",\"kv_connector_module_path\":\"spoolcache.vllm.connector\",\"kv_load_failure_policy\":\"fail\",\"kv_connector_extra_config\":{\"spoolcache_root\":\"$CONTAINER_CACHE_ROOT\",\"spoolcache_deployment_namespace\":\"$CACHE_NAMESPACE\",\"spoolcache_access_mode\":\"read-write\",\"spoolcache_direct_io\":\"required\",\"spoolcache_max_bytes\":$CACHE_MAX_BYTES}}"
+    kv_config="{\"kv_connector\":\"SpoolCacheConnector\",\"kv_role\":\"kv_both\",\"kv_connector_module_path\":\"spoolcache.vllm.connector\",\"kv_load_failure_policy\":\"fail\",\"kv_connector_extra_config\":{\"spoolcache_path\":\"$CONTAINER_CACHE_ROOT\",\"spoolcache_max_size\":$CACHE_MAX_SIZE}}"
     output=(
         docker run -d --name "$container_name" --init
         --gpus all --ipc host --network host --stop-timeout 120
@@ -332,20 +343,24 @@ docker_args() {
 
 start_group() {
     preflight
-    mkdir -p "$GEMMA_HEAD_CACHE_ROOT"
-    remote_exec mkdir -p "$GEMMA_WORKER_CACHE_ROOT"
+    local head_cache_path worker_cache_path worker_home
+    head_cache_path="$(spoolcache_host_path "$SPOOLCACHE_PATH" "$HOME")"
+    worker_home="$(remote_exec bash -c 'printf "%s" "$HOME"')"
+    worker_cache_path="$(spoolcache_host_path "$SPOOLCACHE_PATH" "$worker_home")"
+    mkdir -p "$head_cache_path"
+    remote_exec mkdir -p "$worker_cache_path"
     docker rm -f "$HEAD_CONTAINER" >/dev/null 2>&1 || true
     remote_exec docker rm -f "$WORKER_CONTAINER" >/dev/null 2>&1 || true
 
     local -a worker_args head_args
     docker_args 1 "$GEMMA_WORKER_IP" "$GEMMA_WORKER_GLOO_IFACE" \
         "$GEMMA_WORKER_NCCL_IFACES" "$GEMMA_WORKER_NCCL_HCAS" \
-        "$GEMMA_WORKER_HF_HOME" "$GEMMA_WORKER_CACHE_ROOT" \
+        "$GEMMA_WORKER_HF_HOME" "$worker_cache_path" \
         "$WORKER_CONTAINER" worker_args
     worker_args+=(--headless)
     docker_args 0 "$GEMMA_HEAD_IP" "$GEMMA_HEAD_GLOO_IFACE" \
         "$GEMMA_HEAD_NCCL_IFACES" "$GEMMA_HEAD_NCCL_HCAS" \
-        "$GEMMA_HEAD_HF_HOME" "$GEMMA_HEAD_CACHE_ROOT" \
+        "$GEMMA_HEAD_HF_HOME" "$head_cache_path" \
         "$HEAD_CONTAINER" head_args
     head_args+=(--host 0.0.0.0 --port "$API_PORT")
 

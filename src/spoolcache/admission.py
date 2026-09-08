@@ -1,7 +1,7 @@
 """Small, deterministic policies for optional cache publication.
 
 Restore admission is a correctness decision: once vLLM allocates blocks for an
-external hit, failure is fatal in the current patch-free HMA profile.  Store
+external hit, failure is fatal in the current connector.  Store
 admission is different.  A store is optional and may be skipped to protect the
 request's latency or NVMe endurance.  Keeping that policy pure makes it easy to
 test without importing vLLM or allocating model memory.
@@ -48,8 +48,8 @@ def admit_store_plans(
     recompute and amortize the fixed model-runner interruption better.  Input
     order breaks ties, making the result stable and replayable in tests.
 
-    ``max_plans=0`` is an intentional fast way to keep read/write configuration
-    loaded while suppressing optional publication.  It is not an error.
+    A zero budget admits no plans and counts every unique plan as skipped.
+    Production supplies its fixed internal per-step budget.
     """
 
     if isinstance(max_plans, bool) or not isinstance(max_plans, int):

@@ -15,7 +15,6 @@ from unittest import mock
 
 import spoolcache.maintenance as maintenance_module
 import spoolcache.store as store_module
-from spoolcache.config import DirectIOMode
 from spoolcache.maintenance import (
     SCRUB_DATABASE_NAME,
     DeepScrubber,
@@ -43,7 +42,6 @@ def open_store(root: Path) -> ManifestStore:
         root,
         slot_bytes=4096,
         slot_count=2,
-        direct_io=DirectIOMode.DISABLED,
         expected_deployment_digest=DEPLOYMENT,
         expected_rank_digest=RANK_IDENTITY,
         expected_rank=0,
@@ -348,7 +346,6 @@ class DeepScrubberTests(unittest.TestCase):
                 root,
                 slot_bytes=4096,
                 slot_count=1,
-                direct_io=DirectIOMode.DISABLED,
             ) as store:
                 with self.assertRaisesRegex(ValueError, "complete expected identity"):
                     DeepScrubber(store)
@@ -1390,7 +1387,6 @@ class DeepScrubberTests(unittest.TestCase):
                         root,
                         slot_bytes=4096,
                         slot_count=1,
-                        direct_io=DirectIOMode.DISABLED,
                     ) as writer:
                         commit_entry(writer, entry_id=entry, payloads=(b"payload",))
 
@@ -1400,7 +1396,6 @@ class DeepScrubberTests(unittest.TestCase):
                         root,
                         slot_bytes=4096,
                         slot_count=1,
-                        direct_io=DirectIOMode.DISABLED,
                         **actual,
                     ) as store:
                         scrubber = DeepScrubber(store)

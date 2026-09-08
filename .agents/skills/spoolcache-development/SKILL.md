@@ -83,7 +83,7 @@ SpoolCache functionality.
   stage-local layer sets may differ, but ordered page-selection semantics must
   agree. Do not copy LMCache deployment helpers that assume TP is intra-node
   or PP is inter-node, and do not add a model-specific partition or stage map.
-- Include text tokens, namespace/salt, model-locator/runtime identity, and
+- Include text tokens, request cache_salt, model-locator/runtime identity, and
   qualified multimodal identifiers plus placeholder geometry in cache keys.
 - Do not add model, architecture, or modality allowlists. For multimodal
   models, discover every enabled input from vLLM's public multimodal registry
@@ -194,8 +194,8 @@ SpoolCache functionality.
   checkpoint attestation. SpoolCache authenticates its own KV payload and does
   not scan, copy, rewrite, or inventory an entire model repository. Operators
   own model-artifact immutability through images, immutable revisions, or an
-  explicit namespace rollover. Derive the namespace from public vLLM
-  `ModelConfig`: prefer non-empty `model_weights`, otherwise `model`, and bind
+  explicit model locator/revision or cache-path change. Derive model identity
+  from public vLLM `ModelConfig`: prefer non-empty `model_weights`, otherwise `model`, and bind
   `revision`. Ignore served aliases and configuration class names. Do not add a
   launcher-supplied digest, model profile, or repository file receipt.
 - Build releases from a clean committed tree using `scripts/build-release.py`.
@@ -399,7 +399,8 @@ do not claim that a same-process warm request proves an NVMe restore.
   the bounded quarantine metrics. The rank-local receipt is not yet a
   scheduler receipt: vLLM transports worker stats after an iteration. Wait for
   the quorum gauge to withdraw the entry; if the service is idle, drive one
-  unrelated small `spoolcache_bypass=true` request as a report barrier. Never
+  unrelated small request with `spoolcache.skip_read=true` and
+  `spoolcache.skip_write=true` as a report barrier. Never
   use the affected prompt for that barrier. Then clear process-local APC by a
   complete deployment-managed TP restart and require the affected request to
   record an external rank-quorum miss, zero cached tokens, and the established

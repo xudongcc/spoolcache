@@ -20,7 +20,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field, fields, is_dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence
 
 from vllm.distributed.kv_transfer.kv_connector.v1.base import (
     KVConnectorBase_V1,
@@ -158,7 +158,6 @@ class SpoolCachePlan:
 class SpoolCacheMetadata(KVConnectorMetadata):
     loads: tuple[SpoolCachePlan, ...] = ()
     stores: tuple[SpoolCachePlan, ...] = ()
-    schema: str = "spoolcache-connector-metadata/v1"
 
 
 @dataclass(frozen=True)
@@ -295,8 +294,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             self.runtime_receipt.vllm_build_sha256[:12],
             self.runtime_receipt.build_fingerprint_kind,
         )
-        if self.config.access_mode.value != "disabled":
-            require_qualified_allocator()
+        require_qualified_allocator()
 
         self._multimodal_modalities = _discover_multimodal_modalities(vllm_config)
         logger.warning(
@@ -385,10 +383,9 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         )
         self._coordination_digest = sha256_json(
             {
-                "schema": "spoolcache-coordination/v1",
+                "schema": "spoolcache-coordination/v2",
                 "profile": self.layout.profile,
                 "model_namespace_sha256": self._model_namespace_sha256,
-                "deployment_namespace": self.config.deployment_namespace,
                 "chunk_tokens": CACHE_CHUNK_TOKENS,
                 "spoolcache_version": SPOOLCACHE_VERSION,
                 "vllm_version": self.runtime_receipt.vllm_version,
@@ -404,13 +401,12 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         self._store_progress: dict[str, _StoreProgress] = {}
         self._restored_requests: set[str] = set()
         self._request_salts: dict[str, str | None] = {}
-        # A request-local bypass is useful for a clean GPU-prefix-cache control
-        # in benchmarks and for callers that know a one-off prompt must not
-        # touch persistent storage.  It travels through vLLM's public
-        # ``kv_transfer_params`` field; no vLLM source patch is required.
+        # Remember skip_write and invalid-salt requests until completion so
+        # store tracking cannot publish them. Persistent read control is
+        # independent and checked at lookup through ``spoolcache.skip_read``.
         # Keep only request IDs here so arbitrary client data is never copied
         # into connector metadata or logs.
-        self._bypassed_requests: set[str] = set()
+        self._skip_write_requests: set[str] = set()
         self._store: ManifestStore | None = None
         self._mover: TorchPageMover | None = None
         self._reporter: InventoryReporter | None = None
@@ -456,9 +452,6 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
                 len(shared_aliases),
                 sha256_json({"aliases": shared_aliases})[:12],
             )
-        if self.config.access_mode.value == "disabled":
-            return
-
         coordinate = _runtime_worker_coordinate(
             vllm_config=self._vllm_config,
             tp_degree=self._tp_degree,
@@ -486,7 +479,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             ),
         )
         rank_root = (
-            Path(self.config.root)
+            Path(self.config.path)
             / self.deployment_identity.digest
             / f"rank-{rank:04d}"
         )
@@ -496,7 +489,6 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
                 rank_root,
                 slot_bytes=STAGING_SLOT_BYTES,
                 slot_count=STAGING_SLOT_COUNT,
-                direct_io=self.config.direct_io,
                 expected_deployment_digest=self.deployment_identity.digest,
                 expected_rank_digest=rank_identity.digest,
                 expected_rank=rank,
@@ -619,7 +611,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         logger.warning(
             "spoolcache: worker ready rank=%d pp_rank=%d tp_rank=%d "
             "dcp_rank=%d root=%s entries=%d "
-            "pinned_bytes=%d direct_io=%s",
+            "pinned_bytes=%d direct_io=True",
             rank,
             coordinate.pp_rank,
             coordinate.tp_rank,
@@ -627,7 +619,6 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             rank_root,
             len(entries),
             self._mover.pinned_budget_bytes,
-            self._store.direct_io_active,
         )
         self._refresh_worker_metrics(force_disk=True)
 
@@ -776,11 +767,8 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         request: "Request",
         num_computed_tokens: int,
     ) -> tuple[int | None, bool]:
-        if _request_bypasses_spoolcache(request):
-            self._record_lookup("bypass", "request_bypass")
-            return 0, False
-        if not self.config.restore_enabled:
-            self._record_lookup("miss", "restore_disabled")
+        if _request_skips_read(request):
+            self._record_lookup("bypass", "request_skip_read")
             return 0, False
         if self._catalog is None:
             self._record_lookup("miss", "catalog_unavailable")
@@ -819,7 +807,6 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         candidates = prefix_digests(
             tokens,
             deployment_digest=self.deployment_identity.digest,
-            namespace=self.config.deployment_namespace,
             cache_salt=cache_salt,
             chunk_tokens=CACHE_CHUNK_TOKENS,
             boundaries=range(first, ceiling + 1, CACHE_CHUNK_TOKENS),
@@ -865,10 +852,10 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
     def on_new_request(self, request: "Request") -> None:
         salt = _request_cache_salt(request)
         self._request_salts[request.request_id] = salt or None
-        if salt is None or _request_bypasses_spoolcache(request):
-            self._bypassed_requests.add(request.request_id)
+        if salt is None or _request_skips_write(request):
+            self._skip_write_requests.add(request.request_id)
         else:
-            self._bypassed_requests.discard(request.request_id)
+            self._skip_write_requests.discard(request.request_id)
 
     def update_state_after_alloc(
         self,
@@ -913,11 +900,10 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             self._restored_requests.discard(request_id)
             self._need_load.pop(request_id, None)
             self._request_salts.pop(request_id, None)
-            self._bypassed_requests.discard(request_id)
+            self._skip_write_requests.discard(request_id)
 
-        if self.config.store_enabled:
-            candidates.extend(self._track_new_requests(scheduler_output))
-            candidates.extend(self._track_cached_requests(scheduler_output))
+        candidates.extend(self._track_new_requests(scheduler_output))
+        candidates.extend(self._track_cached_requests(scheduler_output))
 
         # Store is synchronous in the current patch-free connector.  Bounding
         # plans here prevents a busy scheduler step from serializing an
@@ -959,7 +945,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         for request in scheduler_output.scheduled_new_reqs:
             request_id = request.req_id
             if (
-                request_id in self._bypassed_requests
+                request_id in self._skip_write_requests
                 or request_id in self._restored_requests
                 or request_id in load_ids
             ):
@@ -982,7 +968,6 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
                 tokens,
                 span_tokens=target_span_tokens,
                 deployment_digest=self.deployment_identity.digest,
-                namespace=self.config.deployment_namespace,
                 cache_salt=cache_salt or "",
                 chunk_tokens=CACHE_CHUNK_TOKENS,
                 multimodal_features=multimodal_features,
@@ -1103,7 +1088,6 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
                 progress.token_ids,
                 span_tokens=span_tokens,
                 deployment_digest=self.deployment_identity.digest,
-                namespace=self.config.deployment_namespace,
                 cache_salt=progress.cache_salt,
                 chunk_tokens=CACHE_CHUNK_TOKENS,
                 multimodal_features=progress.multimodal_features,
@@ -1734,22 +1718,23 @@ def _runtime_worker_coordinate(
         raise RuntimeError("vLLM worker rank coordinates are inconsistent") from error
 
 
-def _request_bypasses_spoolcache(request: object) -> bool:
-    """Return whether one request explicitly opts out of persistent KV I/O.
+def _request_skips_read(request: object) -> bool:
+    """Skip persistent restore admission without changing store or GPU reuse."""
 
-    vLLM exposes ``kv_transfer_params`` on its OpenAI request models and
-    carries that mapping into the internal Request.  SpoolCache reserves the
-    boolean ``spoolcache_bypass`` key.  Only the literal JSON boolean ``true``
-    enables it: strings and integers are deliberately ignored so an accidental
-    ``"true"`` does not silently change cache semantics.
+    params = getattr(request, "kv_transfer_params", None)
+    return isinstance(params, Mapping) and params.get("spoolcache.skip_read") is True
 
-    The bypass covers both restore and Store.  vLLM's own in-process GPU prefix
-    cache remains active, making this a useful non-persistent control without a
-    vLLM modification or a service-wide cache-mode change.
+
+def _request_skips_write(request: object) -> bool:
+    """Skip persistence writes only when the public request flag is JSON true.
+
+    vLLM carries ``kv_transfer_params`` into the internal Request. The key
+    ``spoolcache.skip_write`` leaves persistent reads and GPU prefix reuse active.
+    Strings and integers are ignored; only the literal boolean enables it.
     """
 
     params = getattr(request, "kv_transfer_params", None)
-    return isinstance(params, Mapping) and params.get("spoolcache_bypass") is True
+    return isinstance(params, Mapping) and params.get("spoolcache.skip_write") is True
 
 
 def _pre_forward_store_span(
@@ -1807,7 +1792,6 @@ def _entry_id(
     *,
     span_tokens: int,
     deployment_digest: str,
-    namespace: str,
     cache_salt: str,
     chunk_tokens: int,
     multimodal_features: Sequence[MultimodalFeatureIdentity] = (),
@@ -1815,7 +1799,6 @@ def _entry_id(
     digests = prefix_digests(
         tokens,
         deployment_digest=deployment_digest,
-        namespace=namespace,
         cache_salt=cache_salt,
         chunk_tokens=chunk_tokens,
         boundaries=(span_tokens,),

@@ -4,42 +4,31 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 from typing import Mapping
 
 from ..config import SpoolCacheConfig
 
 
-def _integer(environment: Mapping[str, str], name: str, default: int) -> int:
+def _size_gb(environment: Mapping[str, str], name: str, default: float) -> float:
     raw = environment.get(name, str(default))
     try:
-        return int(raw)
+        return float(raw)
     except ValueError as error:
-        raise ValueError(f"{name} must be an integer") from error
+        raise ValueError(f"{name} must be a number in GB") from error
 
 
 def build_config(environment: Mapping[str, str]) -> dict[str, object]:
     extra: dict[str, object] = {
-        "spoolcache_root": environment.get(
-            "SPOOLCACHE_CONTAINER_ROOT", "/var/lib/spoolcache"
-        ),
-        "spoolcache_deployment_namespace": environment.get(
-            "SPOOLCACHE_NAMESPACE", "default"
-        ),
-        "spoolcache_access_mode": environment.get(
-            "SPOOLCACHE_ACCESS_MODE", "read-write"
-        ),
-        "spoolcache_max_bytes": _integer(
-            environment, "SPOOLCACHE_MAX_BYTES", 200 * 1024**3
-        ),
-        "spoolcache_direct_io": environment.get(
-            "SPOOLCACHE_DIRECT_IO", "required"
+        "spoolcache_max_size": _size_gb(
+            environment, "SPOOLCACHE_MAX_SIZE", 200
         ),
     }
+    if "SPOOLCACHE_PATH" in environment:
+        extra["spoolcache_path"] = environment["SPOOLCACHE_PATH"]
     # Validation here makes container startup fail before vLLM imports the
     # model or allocates its 100+ GiB runtime.
     validated = SpoolCacheConfig.from_mapping(extra)
-    extra["spoolcache_root"] = str(Path(validated.root))
+    extra["spoolcache_path"] = str(validated.path)
     return {
         "kv_connector": "SpoolCacheConnector",
         "kv_role": "kv_both",

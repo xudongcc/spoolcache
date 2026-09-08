@@ -62,7 +62,7 @@ jobs:
           WHEEL_SHA=$(python -c 'import json; print(json.load(open("dist/release/release.json"))["wheel_sha256"])')
           "$RUNNER_TEMP/wheel-test/bin/python" benchmarks/verify_release_install.py --wheel dist/release/*.whl --sha256 "$WHEEL_SHA"
           "$RUNNER_TEMP/wheel-test/bin/python" -m unittest discover -s tests -v
-          "$RUNNER_TEMP/wheel-test/bin/spoolcache-maintenance" --help
+          "$RUNNER_TEMP/wheel-test/bin/spoolcache" --help
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: steps.version.outputs.released == 'true'
         with:

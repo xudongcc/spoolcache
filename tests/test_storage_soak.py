@@ -24,7 +24,6 @@ from benchmarks.soak_storage_maintenance import (
     _stop_rss_monitor,
     run_soak,
 )
-from spoolcache.config import DirectIOMode
 from spoolcache.maintenance import DeepScrubber
 from spoolcache.store import ManifestStore
 
@@ -46,7 +45,10 @@ class StorageSoakTests(unittest.TestCase):
                 "--payload-bytes",
                 "256",
                 "--max-cache-bytes",
-                str(96 * 1024),
+                # Each small payload now occupies a 4096-byte direct-I/O block.
+                # Retain enough entries to grow the scrub work tables, while
+                # still forcing GC within these 96 iterations.
+                str(384 * 1024),
                 "--scrub-every",
                 "96",
                 "--reopen-every",
@@ -154,7 +156,6 @@ class StorageSoakTests(unittest.TestCase):
                 root,
                 slot_bytes=4096,
                 slot_count=1,
-                direct_io=DirectIOMode.DISABLED,
                 expected_deployment_digest=DEPLOYMENT,
                 expected_rank_digest=RANK_IDENTITY,
                 expected_rank=0,

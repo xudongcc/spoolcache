@@ -9,7 +9,6 @@ import statistics
 import time
 from pathlib import Path
 
-from spoolcache.config import DirectIOMode
 from spoolcache.store import ManifestStore
 
 MIB = 1024 * 1024
@@ -39,7 +38,6 @@ def main() -> None:
         args.rank_root,
         slot_bytes=slot_bytes,
         slot_count=args.slot_count,
-        direct_io=DirectIOMode.REQUIRED,
     ) as store:
         initial = store.lookup(entry_id, verify_payloads=False)
         if not initial.is_hit or initial.manifest is None:

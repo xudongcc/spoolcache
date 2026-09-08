@@ -1,76 +1,86 @@
-# G6 release qualification
+# G6: release and installation evidence
 
-`summary.json` identifies the exact local qualification candidate, all four
-runtime images, fixed model revision and the PP=1/PP=2 live receipts.
-`semantic-release-rehearsal.json` records isolated PSR version/build/install
-rehearsals; it is not a claim of a remote publication. The final publication
-receipt `publication.json` records GitHub/PyPI bytes from the successful run
-34180558915. `published-installations.json` binds the public wheel to the final
-four images on both nodes and proves that all SpoolCache package files and
-package metadata headers are identical to the live-qualified candidate. Only
-the README description, its RECORD entry and ZIP timestamps differ; the runtime
-qualification is carried forward by exact package-payload equality, not by the
-version string. Candidate and published image IDs are deliberately recorded
-separately.
+Recorded on 2026-09-08. G6 qualified an installed-wheel candidate on the pinned
+Gemma fixture, then authenticated the first public 0.1.0 release and its installed
+images. This directory is historical evidence; use the current
+[release guide](../../RELEASE.md) for instructions.
 
-The candidate wheel was built from pre-squash commit `93e7ad4`, SHA-256
-`9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b`.
-All four candidate images on both hosts authenticate that same wheel and every
-installed package file. Source bind mounts and source sync are removed from
-all serving launchers. Historical commit IDs remain local evidence after the
-user-requested squash; they are not remote GitHub revision links.
+## Artifacts
 
-## Evidence and interpretation
+| Artifact | Source commit | Wheel SHA-256 |
+| --- | --- | --- |
+| Live-qualified candidate | `93e7ad49089e2b191eed1962b991fdad3653ce7d` | `9ab91e0eb4782b723891a379a7fe634fa1fae08f0329fa2e622ee29bb2e9925b` |
+| Public 0.1.0 | `40528e685301bd5f45e1332255d69f492b3d8819` | `abaf71af05afd41c0d5a2873a003bc94af3a65b54dbe9db97c1015b2dd01bd28` |
 
-- Host: 258 passed, 12 skipped, 279 subtests. Four real CUDA/vLLM runtime suites:
-  264 tests each; official/DeepSeek skip one unavailable non-prefix scratch
-  contract, Qwen/GLM skip none. Three deployment launcher suites: 5 passed each.
-- Both topologies: two independently salted cold bypasses with zero cached
-  tokens, cold producer, GPU/MM-only reset and persistent restore, full group
-  restart, then repeat after restoring the fault-injected object. All five
-  paths compare complete output hashes, including finish and reasoning fields.
-- Text/image/audio/video restore 2,048 tokens; mixed restores 2,560. Every rank
-  must name the same entry and span; full object digests, lengths, zero padding,
-  independently discovered group/layer/page coverage and identities are checked.
-- Faults modify one previously authenticated object byte after quorum offer.
-  A narrow backup is retained until exact-byte restoration and full-group
-  restart verification succeed. All cache roots and unrelated entries remain.
+The candidate commit predates the requested history squash. Its ID is local
+provenance, not a promised remote revision link. Both wheels report 0.1.0 but
+have different distribution bytes. The public installation receipt proves that
+all 22 package files and metadata headers match the qualified candidate;
+README description, its RECORD entry and ZIP timestamps differ. Qualification
+was carried forward through that explicit equality check, not the version string.
 
-## Negative observations and scope
+## File map
 
-See `negative-observations.json` and the raw archive. PP=1 initially used
-ambiguous song labels; two cold controls selected SPEECH. Mutually exclusive
-song-title labels then established a stable semantic oracle. The first PP=1
-fault lacked an observable exit code and was repeated with external `strace`
-restricted to `exit_group`; the actual exit was 70.
+| File | Purpose |
+| --- | --- |
+| [summary.json](summary.json) | Overall scope, artifact identities, results and limitations. |
+| [release.json](release.json) | Clean-commit candidate build receipt. |
+| [semantic-release-rehearsal.json](semantic-release-rehearsal.json) | Isolated version/build/install rehearsal; not publication proof. |
+| [g6-clean-install-results.json](g6-clean-install-results.json) | Fresh candidate installs and tamper rejection. |
+| [g6-runtime-stacks.json](g6-runtime-stacks.json) | Base versus candidate vLLM/Torch/CUDA/NCCL comparison. |
+| [g6-image-quorum.json](g6-image-quorum.json) | Candidate image equality across participants. |
+| [g6-official-install.json](g6-official-install.json), [g6-worker-install-results.json](g6-worker-install-results.json) | Candidate package authentication in runtime images. |
+| [g6-runtime-results.json](g6-runtime-results.json) | Installed-wheel runtime test results. |
+| [live-pp1.json](live-pp1.json), [live-pp2.json](live-pp2.json) | Text/media controls, restore, restart, payload and fault observations. |
+| [negative-observations.json](negative-observations.json) | Failed controls, upstream limits and fault-test repetitions. |
+| [raw-qualification.json](raw-qualification.json), [raw archive](raw-qualification.tar.gz) | Raw evidence and archive identity. |
+| [publication.json](publication.json) | GitHub/PyPI bytes from successful workflow run 34180558915. |
+| [pypi-install.json](pypi-install.json) | Fresh installation of the public wheel. |
+| [published-installations.json](published-installations.json) | Public wheel authentication in four images on both nodes and candidate payload equality. |
 
-PP=2 long padded image/mixed cold controls stably return OTHER, although a
-short image control identifies CATS. These two paths establish cache output
+## Recorded checks
+
+Host tests: 258 passed, 12 skipped, 279 subtests. Each of four real CUDA/vLLM
+runtime suites ran 264 tests. Official and DeepSeek skipped one unavailable
+non-prefix scratch contract; Qwen and GLM skipped none. Each of the three
+external deployment launcher suites passed five checks.
+
+The live fixture was `google/gemma-4-E2B-it` at revision
+`3e22461f65e89153144f8adb70e3b8c2cc9845a7`, with PP=1 and PP=2. Text, image,
+audio and video restored 2,048 tokens; mixed prompts restored 2,560. Evidence
+includes independently salted cold bypasses, process-local cache resets,
+full-group restart, complete output hashes and every rank's authenticated
+entry/span, payload length, digest, padding and page coverage.
+
+Fault tests changed one previously authenticated object byte after quorum offer,
+retained a narrow backup and restored exact bytes before recovery verification.
+Persistent roots and unrelated entries were preserved. The final public wheel
+was authenticated in eight installations across the four images and two hosts.
+
+## Negative observations and limits
+
+Initial PP=1 audio choices overlapped and cold controls chose SPEECH. Revised,
+mutually exclusive song-title choices established a stable oracle; the failed
+controls remain recorded. The first PP=1 fault lacked an observable child exit
+code, so a repeat used external tracing of `exit_group` and observed exit 70.
+
+PP=2 long padded image and mixed prompts stably returned OTHER in cold controls,
+while a short image control returned CATS. Those long cases establish output
 equivalence and payload integrity, not correct media classification. Alternate
-prompt/choice experiments are retained; no favorable sample is substituted.
+prompt experiments remain in the evidence.
 
-On remote PP stage failure, the head health endpoint can remain successful and
-an inference stream can hang. The first fault run hit a 90-second external
-deadline, stopped both ranks and authenticated the restored object. The repeated
-fault observes the remote worker exit 70 and then performs deployment-owned
-whole-group stop: the incomplete client stream is rejected, API readiness is
-false after stop, and both old ranks are absent before object restoration.
-No automatic upstream cross-host readiness propagation is claimed.
+A remote PP worker exited 70 while the head health endpoint still succeeded and
+the client stream hung. The first run reached a 90-second external deadline;
+a repeated run observed exit 70 and performed a deployment-owned whole-group
+stop. The incomplete stream was rejected, readiness became false after stop,
+and both old ranks were absent before object restoration. This does not prove
+automatic upstream propagation of remote-stage failure.
 
-These are correctness/install receipts, not new performance measurements or
-new real-model DeepSeek/Qwen/GLM qualifications. No 24-hour soak was required.
-Media bytes are not redistributed; fixture origins and rights are documented
-in the live-lab skill reference, while the receipts bind their exact hashes.
+G6 did not rerun real-model DeepSeek/Qwen/GLM feature or maximum-context workloads,
+measure a new performance gain, or require a 24-hour soak. Its review reported
+no unresolved P1/P2 issues at that artifact boundary. Subsequent local changes
+need their own qualification; see [Migration](../../MIGRATION.md).
 
-## Review
-
-Reviewed the installed-package boundary, reproducible clean-commit builder,
-wheel origin and file authentication, image equality/frozen IDs, production
-configuration removal, schema/identity rollback rules, and release workflow.
-PSR owns versions/changelog/tags; lock updates fail closed, release commits and
-tags push atomically after tests, stale workflow SHAs are rejected, publication
-uses the retained authenticated artifact, and OIDC permission is isolated to
-the PyPI job. No connector backend or vLLM patch was added for release work.
-The two upstream/model limitations above remain explicit supported-scope
-constraints. Final live recovery and remote publication status are recorded in
-the machine receipts rather than inferred from this review.
+Media bytes are not redistributed. [Lab qualification](../../LAB.md#media-fixtures)
+records the fixture origins and hashes. The [documentation archive](../../archive/README.md)
+preserves the original G6 narrative; machine receipts and raw evidence remain unchanged.

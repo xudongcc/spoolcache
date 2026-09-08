@@ -25,8 +25,8 @@ services:
         source: ${HF_HOME:-/root/.cache/huggingface}
         target: /root/.cache/huggingface
         read_only: true
-      - type: volume
-        source: spoolcache-dev-data
+      - type: bind
+        source: ${SPOOLCACHE_PATH:-${HOME}/.cache/spoolcache}
         target: /var/lib/spoolcache
     command:
       - google/gemma-4-E2B-it
@@ -50,7 +50,7 @@ services:
       - --enable-prompt-tokens-details
       - --kv-transfer-config
       - >-
-        {"kv_connector":"SpoolCacheConnector","kv_role":"kv_both","kv_connector_module_path":"spoolcache.vllm.connector","kv_load_failure_policy":"fail","kv_connector_extra_config":{"spoolcache_root":"/var/lib/spoolcache","spoolcache_deployment_namespace":"gemma4-e2b-development","spoolcache_access_mode":"read-write","spoolcache_direct_io":"required","spoolcache_max_bytes":214748364800}}
+        {"kv_connector":"SpoolCacheConnector","kv_role":"kv_both","kv_connector_module_path":"spoolcache.vllm.connector","kv_load_failure_policy":"fail","kv_connector_extra_config":{"spoolcache_path":"/var/lib/spoolcache","spoolcache_max_size":200}}
     healthcheck:
       test:
         - CMD
@@ -61,6 +61,3 @@ services:
       timeout: 5s
       retries: 60
       start_period: 5m
-
-volumes:
-  spoolcache-dev-data:

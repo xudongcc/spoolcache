@@ -11,7 +11,8 @@ from .errors import IdentityError
 
 _TOKEN = struct.Struct("<q")
 _COUNT = struct.Struct("<Q")
-_DOMAIN = b"spoolcache-exact-prefix/v1\x00"
+# Removing the operator namespace changes the encoding; keep legacy keys disjoint.
+_DOMAIN = b"spoolcache-exact-prefix/v2\x00"
 _MULTIMODAL_DOMAIN = b"spoolcache-multimodal-prefix/v1\x00"
 _MULTIMODAL_GEOMETRY = struct.Struct("<QQ")
 
@@ -125,7 +126,7 @@ def _gcd(left: int, right: int) -> int:
     return left
 
 
-def _initial_digest(deployment_digest: str, namespace: str, cache_salt: str) -> bytes:
+def _initial_digest(deployment_digest: str, cache_salt: str) -> bytes:
     if len(deployment_digest) != 64 or any(
         character not in "0123456789abcdef" for character in deployment_digest
     ):
@@ -134,13 +135,10 @@ def _initial_digest(deployment_digest: str, namespace: str, cache_salt: str) -> 
         deployment = bytes.fromhex(deployment_digest)
     except ValueError as error:
         raise IdentityError("deployment digest is not hexadecimal") from error
-    namespace_bytes = namespace.encode("utf-8")
     salt_bytes = cache_salt.encode("utf-8")
     return hashlib.sha256(
         _DOMAIN
         + deployment
-        + _COUNT.pack(len(namespace_bytes))
-        + namespace_bytes
         + _COUNT.pack(len(salt_bytes))
         + salt_bytes
     ).digest()
@@ -150,7 +148,6 @@ def prefix_digests(
     token_ids: Sequence[int] | Iterable[int],
     *,
     deployment_digest: str,
-    namespace: str,
     cache_salt: str = "",
     chunk_tokens: int = 256,
     boundaries: Iterable[int] | None = None,
@@ -184,7 +181,7 @@ def prefix_digests(
     ):
         raise ValueError("prefix boundaries must be positive aligned token counts")
     features = validate_multimodal_features(multimodal_features, len(tokens))
-    previous = _initial_digest(deployment_digest, namespace, cache_salt)
+    previous = _initial_digest(deployment_digest, cache_salt)
     result: list[PrefixDigest] = []
     for start in range(0, len(tokens), chunk_tokens):
         chunk = tokens[start : start + chunk_tokens]

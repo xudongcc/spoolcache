@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import unittest
 from unittest import mock
 
@@ -10,6 +11,27 @@ from benchmarks.bench_prefix_e2e import (
 
 
 class PrefixBenchmarkTests(unittest.TestCase):
+    def test_request_control_flags_preserve_salt_and_emit_exact_booleans(self) -> None:
+        from benchmarks import bench_prefix_e2e as benchmark
+
+        for skip_read, skip_write in ((False, False), (False, True), (True, False), (True, True)):
+            argv = ["bench", "--api", "http://unused", "--model", "model",
+                    "--target-tokens", "1024", "--nonce", "nonce",
+                    "--cache-salt", "fresh-control-salt"]
+            expected = {}
+            for name, value in (("read", skip_read), ("write", skip_write)):
+                if value:
+                    argv.append(f"--skip-{name}")
+                    expected[f"spoolcache.skip_{name}"] = True
+            with self.subTest(skip_read=skip_read, skip_write=skip_write), mock.patch("sys.argv", argv), mock.patch.object(
+                benchmark, "build_prompt_from_source", return_value=[1] * 1024
+            ), mock.patch.object(benchmark.urllib.request, "urlopen", side_effect=RuntimeError("captured")) as send:
+                with self.assertRaisesRegex(RuntimeError, "captured"):
+                    benchmark.main()
+                body = json.loads(send.call_args.args[0].data)
+            self.assertEqual(body["cache_salt"], "fresh-control-salt")
+            self.assertEqual(body.get("kv_transfer_params", {}), expected)
+
     def test_shared_longer_source_produces_an_exact_shorter_prefix(self) -> None:
         source = [1, 2, 3, 4, 5]
         with mock.patch(

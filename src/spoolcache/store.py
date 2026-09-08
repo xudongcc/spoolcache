@@ -17,10 +17,9 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, Iterator, Mapping
+from typing import Callable, Iterable, Iterator
 
 from .buffers import AlignedBufferPool
-from .config import DirectIOMode
 from .errors import ManifestError, ObjectCorruptionError
 from .identity import canonical_json
 from .manifest import (
@@ -128,8 +127,9 @@ class ManifestStore:
     """One physical rank's narrow, owned cache root.
 
     Payload objects may be arbitrarily large, but reads and writes use only a
-    fixed number of fixed-size aligned buffers. A manifest becomes visible only
-    after every referenced immutable object has been fsynced.
+    fixed number of fixed-size aligned buffers with mandatory O_DIRECT. Small
+    metadata uses ordinary I/O. A manifest becomes visible only after every
+    referenced immutable object has been fsynced.
     """
 
     def __init__(
@@ -138,7 +138,6 @@ class ManifestStore:
         *,
         slot_bytes: int = 64 * 1024 * 1024,
         slot_count: int = 2,
-        direct_io: DirectIOMode | str = DirectIOMode.DISABLED,
         expected_deployment_digest: str | None = None,
         expected_rank_digest: str | None = None,
         expected_rank: int | None = None,
@@ -148,7 +147,6 @@ class ManifestStore:
         fault_hook: Callable[[str], None] | None = None,
     ) -> None:
         self.root = Path(root)
-        self.direct_io = DirectIOMode(direct_io)
         self.expected_deployment_digest = expected_deployment_digest
         self.expected_rank_digest = expected_rank_digest
         self.expected_rank = expected_rank
@@ -187,12 +185,13 @@ class ManifestStore:
             slot_bytes=slot_bytes,
             slot_count=slot_count,
         )
-        self._direct_active = self._select_direct_io()
-        self.recover()
-
-    @property
-    def direct_io_active(self) -> bool:
-        return self._direct_active
+        try:
+            if not hasattr(os, "O_DIRECT") or not self._probe_direct_io():
+                raise OSError("O_DIRECT is required but unavailable for the cache root")
+            self.recover()
+        except BaseException:
+            self._pool.close()
+            raise
 
     @property
     def buffer_budget_bytes(self) -> int:
@@ -411,15 +410,6 @@ class ManifestStore:
                     fcntl.flock(descriptor, fcntl.LOCK_UN)
                 os.close(descriptor)
 
-    def _select_direct_io(self) -> bool:
-        if self.direct_io is DirectIOMode.DISABLED:
-            return False
-        supported = hasattr(os, "O_DIRECT") and self._probe_direct_io()
-        if self.direct_io is DirectIOMode.REQUIRED and not supported:
-            self._pool.close()
-            raise OSError("O_DIRECT is required but unavailable for the cache root")
-        return supported
-
     def _probe_direct_io(self) -> bool:
         probe = self.root / "tmp" / f"direct-probe-{uuid.uuid4().hex}.part"
         descriptor = -1
@@ -429,7 +419,7 @@ class ManifestStore:
                 os.O_WRONLY
                 | os.O_CREAT
                 | os.O_EXCL
-                | getattr(os, "O_DIRECT", 0)
+                | os.O_DIRECT
                 | _o_nofollow(),
                 0o600,
             )
@@ -1113,9 +1103,7 @@ class ManifestStore:
         chunks: Iterable[bytes | bytearray | memoryview],
     ) -> tuple[str, int, int]:
         temporary = self.root / "tmp" / f"object-{uuid.uuid4().hex}.part"
-        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | _o_nofollow()
-        if self._direct_active:
-            flags |= getattr(os, "O_DIRECT")
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_DIRECT | _o_nofollow()
         descriptor = os.open(temporary, flags, 0o600)
         logical_length = 0
         stored_length = 0
@@ -1143,7 +1131,6 @@ class ManifestStore:
                                     _write_exact(
                                         descriptor,
                                         target[:filled],
-                                        self._direct_active,
                                     )
                                     self._checkpoint("object-after-write")
                                     stored_length += filled
@@ -1153,17 +1140,14 @@ class ManifestStore:
                     if logical_length <= 0:
                         raise ValueError("immutable objects cannot be empty")
                     if filled:
-                        write_length = filled
-                        if self._direct_active:
-                            write_length = _round_up(filled, _ALIGNMENT)
-                            target[filled:write_length] = b"\x00" * (
-                                write_length - filled
-                            )
+                        write_length = _round_up(filled, _ALIGNMENT)
+                        target[filled:write_length] = b"\x00" * (
+                            write_length - filled
+                        )
                         self._checkpoint("object-before-write")
                         _write_exact(
                             descriptor,
                             target[:write_length],
-                            self._direct_active,
                         )
                         self._checkpoint("object-after-write")
                         stored_length += write_length
@@ -1268,8 +1252,6 @@ class ManifestStore:
                 temporary,
                 primary_error=sys.exc_info()[1],
             )
-        if not self._direct_active:
-            _drop_page_cache(destination)
         return object_digest, logical_length, stored_length
 
     def put_source(self, source: ObjectSource) -> ObjectDescriptor:
@@ -1538,9 +1520,7 @@ class ManifestStore:
         if on_bytes_read is not None and not callable(on_bytes_read):
             raise TypeError("object read observer must be callable")
         path = self.root / descriptor.relative_path
-        flags = os.O_RDONLY | _o_nofollow()
-        if self._direct_active:
-            flags |= getattr(os, "O_DIRECT")
+        flags = os.O_RDONLY | os.O_DIRECT | _o_nofollow()
         file_descriptor = os.open(path, flags)
         digest = hashlib.sha256()
         logical_remaining = descriptor.byte_length
@@ -1554,14 +1534,13 @@ class ManifestStore:
                 try:
                     while stored_remaining:
                         count = min(slot.size, stored_remaining)
-                        if self._direct_active and count % _ALIGNMENT:
+                        if count % _ALIGNMENT:
                             raise ObjectCorruptionError(
                                 "direct-I/O object length is not aligned"
                             )
                         read = _read_into_exact(
                             file_descriptor,
                             target[:count],
-                            direct=self._direct_active,
                         )
                         if on_bytes_read is not None:
                             on_bytes_read(read)
@@ -1578,8 +1557,6 @@ class ManifestStore:
             if logical_remaining or digest.hexdigest() != descriptor.sha256:
                 raise ObjectCorruptionError("object SHA-256 differs")
         finally:
-            if not self._direct_active:
-                _fadvise_dontneed(file_descriptor)
             os.close(file_descriptor)
 
     def read_object_bytes(self, descriptor: ObjectDescriptor) -> bytes:
@@ -2283,10 +2260,7 @@ def _write_all(descriptor: int, view: memoryview) -> None:
         cursor += written
 
 
-def _write_exact(descriptor: int, view: memoryview, direct: bool) -> None:
-    if not direct:
-        _write_all(descriptor, view)
-        return
+def _write_exact(descriptor: int, view: memoryview) -> None:
     written = os.write(descriptor, view)
     if written != len(view):
         raise OSError("direct-I/O write was short")
@@ -2304,19 +2278,14 @@ def _read_exact_file(descriptor: int, size: int) -> bytes:
     return b"".join(parts)
 
 
-def _read_into_exact(descriptor: int, target: memoryview, *, direct: bool) -> int:
-    cursor = 0
-    while cursor < len(target):
-        read = os.readv(descriptor, [target[cursor:]])
-        if read <= 0:
-            raise ObjectCorruptionError("object read was truncated")
-        cursor += read
-        if direct and cursor != len(target):
-            # A continuation pointer/length may not satisfy O_DIRECT alignment.
-            # Treat the unusual short read as an I/O failure rather than issuing
-            # an unaligned request or silently accepting partial data.
-            raise ObjectCorruptionError("direct-I/O object read was short")
-    return cursor
+def _read_into_exact(descriptor: int, target: memoryview) -> int:
+    read = os.readv(descriptor, [target])
+    if read <= 0:
+        raise ObjectCorruptionError("object read was truncated")
+    if read != len(target):
+        # Retrying a short read could use an unaligned pointer or length.
+        raise ObjectCorruptionError("direct-I/O object read was short")
+    return read
 
 
 def _fsync_directory(path: Path) -> None:
@@ -2370,27 +2339,6 @@ def _cleanup_temporary_file(
             # Diagnostics must never replace either the primary state failure
             # or the cleanup failure selected above.
             pass
-
-
-def _fadvise_dontneed(descriptor: int) -> None:
-    advice = getattr(os, "POSIX_FADV_DONTNEED", None)
-    if advice is None or not hasattr(os, "posix_fadvise"):
-        return
-    try:
-        os.posix_fadvise(descriptor, 0, 0, advice)
-    except OSError:
-        pass
-
-
-def _drop_page_cache(path: Path) -> None:
-    try:
-        descriptor = os.open(path, os.O_RDONLY | _o_nofollow())
-    except OSError:
-        return
-    try:
-        _fadvise_dontneed(descriptor)
-    finally:
-        os.close(descriptor)
 
 
 def _is_digest(value: object) -> bool:

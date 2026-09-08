@@ -8,7 +8,7 @@ calling SpoolCache.  Instead, the benchmark:
 1. stores a small, deterministic set of long prefixes (the restore set);
 2. computes a disjoint 128K working set slightly larger than the authoritative
    GPU KV capacity, naturally evicting the older restore set without restarting;
-3. primes a distinct 128K prefix with SpoolCache's per-request bypass, then in
+3. primes a distinct 128K prefix under a fresh salt with persistent reads/writes skipped, then in
    that same full-cache state measures five long-lived foreground decodes alone
    and with that GPU-local prefix in the sixth slot; and
 4. repeats five foreground decodes while injecting the evicted restore set from
@@ -41,6 +41,7 @@ import threading
 import time
 from typing import Iterable
 import urllib.request
+import uuid
 
 
 EXTERNAL_HITS = "vllm:external_prefix_cache_hits_total"
@@ -271,7 +272,8 @@ def stream_completion(
     seed: int,
     ready: threading.Event | None = None,
     barrier: threading.Barrier | None = None,
-    bypass_spoolcache: bool = False,
+    skip_write: bool = False,
+    skip_read: bool = False,
 ) -> dict[str, object]:
     """Run one completion and retain timing metadata but not generated text."""
 
@@ -287,11 +289,13 @@ def stream_completion(
         "seed": seed,
         "cache_salt": salt,
     }
-    if bypass_spoolcache:
-        # This is handled by SpoolCache through vLLM's public passthrough field.
-        # vLLM's own GPU prefix cache remains enabled, while persistent lookup
-        # and Store are both skipped for this request only.
-        body["kv_transfer_params"] = {"spoolcache_bypass": True}
+    controls = {}
+    if skip_read:
+        controls["spoolcache.skip_read"] = True
+    if skip_write:
+        controls["spoolcache.skip_write"] = True
+    if controls:
+        body["kv_transfer_params"] = controls
     request = urllib.request.Request(
         f"{api}/v1/completions",
         data=json.dumps(body).encode(),
@@ -369,7 +373,8 @@ def run_wave(
     output_tokens: int,
     concurrency: int,
     seed_base: int,
-    bypass_spoolcache: bool = False,
+    skip_write: bool = False,
+    skip_read: bool = False,
 ) -> list[dict[str, object]]:
     """Run preparation requests in bounded waves."""
 
@@ -389,7 +394,8 @@ def run_wave(
                     seed_base + offset + lane,
                     None,
                     barrier,
-                    bypass_spoolcache,
+                    skip_write,
+                    skip_read,
                 )
                 for lane, (prompt, salt) in enumerate(wave)
             ]
@@ -439,7 +445,8 @@ def run_interference_phase(
     injection_output_tokens: int,
     settle_seconds: float,
     seed_base: int,
-    injection_bypass_spoolcache: bool = False,
+    injection_skip_write: bool = False,
+    injection_skip_read: bool = False,
 ) -> dict[str, object]:
     """Decode in the foreground and inject one background request at a time."""
 
@@ -499,7 +506,8 @@ def run_interference_phase(
                     salt,
                     injection_output_tokens,
                     seed_base + 10_000 + index,
-                    bypass_spoolcache=injection_bypass_spoolcache,
+                    skip_write=injection_skip_write,
+                    skip_read=injection_skip_read,
                 )
                 for index, (prompt, salt) in enumerate(injection_prompts)
             ]
@@ -623,7 +631,7 @@ def main() -> None:
         default=0,
         help=(
             "authoritative 'GPU KV cache size' value from the boot log; required "
-            "for HMA profiles whose cache_config_info label has another meaning"
+            "for HMA layouts whose cache_config_info label has another meaning"
         ),
     )
     parser.add_argument(
@@ -763,18 +771,16 @@ def main() -> None:
             flush=True,
         )
 
-    # Use a fixture that is absent from the persistent catalog and bypass both
-    # SpoolCache read and write while priming it.  A later replay with the same
-    # bypass can therefore only use vLLM's GPU prefix cache (plus any small tail
-    # vLLM elects to recompute); connector logs and external-hit metrics must
-    # stay completely quiet.
+    # Use a fresh salt even when a run ID is repeated. Skip persistent reads
+    # and writes during priming and replay so later hits come only from the GPU
+    # prefix cache. External-hit metrics must stay zero.
     local_label = f"{args.run_id}-local-control-0000"
     local_resident = (
         build_prompt(args.api, args.model, args.prefix_tokens, local_label),
-        cache_salt(args.run_id, local_label),
+        cache_salt(uuid.uuid4().hex, local_label),
     )
     print(
-        "priming the SpoolCache-bypassed GPU-local control (excluded)",
+        "priming the fresh-salt, skip-write GPU-local control (excluded)",
         flush=True,
     )
     local_prime = run_wave(
@@ -784,8 +790,11 @@ def main() -> None:
         output_tokens=args.injection_output_tokens,
         concurrency=1,
         seed_base=18_000,
-        bypass_spoolcache=True,
+        skip_write=True,
+        skip_read=True,
     )
+    if any(item["cached_tokens"] != 0 for item in local_prime):
+        raise RuntimeError("fresh-salt GPU-local control unexpectedly hit a cache")
     local_injection = [local_resident] * args.restore_entries
 
     baseline = run_interference_phase(
@@ -811,7 +820,8 @@ def main() -> None:
         # Foreground seeds must match the baseline exactly.  Different seeds
         # can change DSpark speculative acceptance even for temperature=0.
         seed_base=20_000,
-        injection_bypass_spoolcache=True,
+        injection_skip_write=True,
+        injection_skip_read=True,
     )
 
     disk = run_interference_phase(
@@ -864,6 +874,9 @@ def main() -> None:
         "local_prime_cached_tokens": [
             item["cached_tokens"] for item in local_prime
         ],
+        "local_control_cache_salt": local_resident[1],
+        "local_control_skip_write": True,
+        "local_control_skip_read": True,
         "phases": [baseline, local, disk],
         "validation": {
             "local_injections_with_cached_tokens": local_cached,
@@ -871,7 +884,7 @@ def main() -> None:
             "disk_injections_with_cached_tokens": disk_cached,
             "external_hit_tokens_delta": external_delta,
             "note": (
-                "PASS requires a SpoolCache-bypassed GPU-local control with "
+                "PASS requires a fresh-salt, skip-write GPU-local control with "
                 "zero external-hit tokens, plus an older restore set proven "
                 "to load through the external connector."
             ),

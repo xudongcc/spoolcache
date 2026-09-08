@@ -9,7 +9,7 @@ from vllm.distributed.kv_transfer.kv_connector.v1.metrics import (
     KVConnectorPromMetrics,
 )
 
-from ..config import AccessMode, SpoolCacheConfig
+from ..config import SpoolCacheConfig
 from ..telemetry import (
     METRIC_DEFINITIONS,
     MetricKind,
@@ -90,19 +90,18 @@ class SpoolCachePromMetrics(KVConnectorPromMetrics):
         raw = getattr(transfer, "kv_connector_extra_config", None)
         if not isinstance(raw, Mapping):
             raise ValueError("SpoolCache Prometheus connector config is invalid")
-        config = SpoolCacheConfig.from_mapping(dict(raw))
-        active = config.access_mode is not AccessMode.DISABLED
+        SpoolCacheConfig.from_mapping(dict(raw))
         for engine_idx in self.per_engine_labelvalues:
             self._bound[("spoolcache_required_ranks", engine_idx, ())].set(
                 required_workers
             )
             self._bound[("spoolcache_ready_ranks", engine_idx, ())].set(
-                required_workers if active else 0
+                required_workers
             )
             for condition in ("rank_identity", "inventory_quorum"):
                 self._bound[
                     ("spoolcache_readiness", engine_idx, (condition,))
-                ].set(int(active))
+                ].set(1)
             self._bound[
                 ("spoolcache_readiness", engine_idx, ("fatal_clear",))
             ].set(1)

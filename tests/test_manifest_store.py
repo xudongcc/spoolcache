@@ -12,7 +12,6 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from spoolcache.config import DirectIOMode
 from spoolcache.manifest import ObjectDescriptor, RankManifest, decode_manifest, encode_manifest
 from spoolcache.quorum import InventoryReporter, QuorumCatalog
 import spoolcache.store as store_module
@@ -63,7 +62,6 @@ def crash_commit_at(root_text: str, stage: str) -> None:
         root,
         slot_bytes=4096,
         slot_count=1,
-        direct_io=DirectIOMode.DISABLED,
         expected_deployment_digest="a" * 64,
         expected_rank_digest="b" * 64,
         expected_rank=0,
@@ -91,7 +89,6 @@ def crash_after_n_objects(root_text: str, target_count: int) -> None:
         root,
         slot_bytes=4096,
         slot_count=1,
-        direct_io=DirectIOMode.DISABLED,
         expected_deployment_digest="a" * 64,
         expected_rank_digest="b" * 64,
         expected_rank=0,
@@ -136,7 +133,6 @@ def crash_collision_repair_at(
         root,
         slot_bytes=4096,
         slot_count=1,
-        direct_io=DirectIOMode.DISABLED,
         expected_deployment_digest="a" * 64,
         expected_rank_digest="b" * 64,
         expected_rank=0,
@@ -160,7 +156,6 @@ def crash_object_quarantine_at(
         root,
         slot_bytes=4096,
         slot_count=1,
-        direct_io=DirectIOMode.DISABLED,
         expected_deployment_digest="a" * 64,
         expected_rank_digest="b" * 64,
         expected_rank=0,
@@ -226,7 +221,6 @@ class ManifestStoreTests(unittest.TestCase):
             root,
             slot_bytes=4096,
             slot_count=1,
-            direct_io=DirectIOMode.DISABLED,
             expected_deployment_digest="a" * 64,
             expected_rank_digest="b" * 64,
             expected_rank=0,
@@ -1225,11 +1219,9 @@ class ManifestStoreTests(unittest.TestCase):
                 def counted_read(
                     file_descriptor: int,
                     target: memoryview,
-                    *,
-                    direct: bool,
                 ) -> int:
                     nonlocal physical_read_bytes
-                    count = real_read(file_descriptor, target, direct=direct)
+                    count = real_read(file_descriptor, target)
                     physical_read_bytes += count
                     return count
 
@@ -1387,7 +1379,6 @@ class ManifestStoreTests(unittest.TestCase):
                 root,
                 slot_bytes=4096,
                 slot_count=1,
-                direct_io=DirectIOMode.DISABLED,
             ) as store:
                 store.set_quarantine_hook(reasons.append)
                 manifest = store.commit(
@@ -1410,7 +1401,8 @@ class ManifestStoreTests(unittest.TestCase):
                     ),
                 )
                 path = root / manifest.objects[0].relative_path
-                path.write_bytes(b"damaged")
+                with path.open("r+b") as handle:
+                    handle.write(b"damaged")
                 result = store.lookup(manifest.entry_id, verify_payloads=True)
                 self.assertFalse(result.is_hit)
             self.assertEqual(reasons, ["payload_checksum"])

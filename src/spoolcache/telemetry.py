@@ -70,8 +70,7 @@ class MetricDefinition:
 
 LOOKUP_LABELS = (
     ("hit", "ready_entry"),
-    ("bypass", "request_bypass"),
-    ("miss", "restore_disabled"),
+    ("bypass", "request_skip_read"),
     ("miss", "catalog_unavailable"),
     ("miss", "cache_salt"),
     ("miss", "request_shape"),

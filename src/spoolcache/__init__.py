@@ -1,6 +1,6 @@
 """SpoolCache persistent KV cache primitives."""
 
-from .config import AccessMode, DirectIOMode, SpoolCacheConfig
+from .config import SpoolCacheConfig
 from .hma import (
     HMALayout,
     build_hma_layout,
@@ -17,9 +17,7 @@ from .prefix import (
 from .store import ManifestStore
 
 __all__ = [
-    "AccessMode",
     "DeploymentIdentity",
-    "DirectIOMode",
     "HMALayout",
     "ManifestStore",
     "ObjectDescriptor",

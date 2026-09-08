@@ -167,9 +167,13 @@ def main() -> None:
         help="Sampling seed. The default makes correctness comparisons repeatable.",
     )
     parser.add_argument(
-        "--bypass-spoolcache",
+        "--skip-write",
         action="store_true",
-        help="Bypass external persistence for a correctness/control request.",
+        help="Skip persistent writes; reads remain enabled. Use a fresh --cache-salt for a cold control.",
+    )
+    parser.add_argument(
+        "--skip-read", action="store_true",
+        help="Skip persistent reads; writes and GPU prefix caching remain enabled.",
     )
     args = parser.parse_args()
     if args.target_tokens <= 0 or args.max_tokens <= 0:
@@ -201,8 +205,13 @@ def main() -> None:
         "ignore_eos": True,
         "cache_salt": args.cache_salt,
     }
-    if args.bypass_spoolcache:
-        body["kv_transfer_params"] = {"spoolcache_bypass": True}
+    controls = {}
+    if args.skip_read:
+        controls["spoolcache.skip_read"] = True
+    if args.skip_write:
+        controls["spoolcache.skip_write"] = True
+    if controls:
+        body["kv_transfer_params"] = controls
     request = urllib.request.Request(
         f"{args.api}/v1/completions",
         data=json.dumps(body).encode(),

@@ -90,3 +90,30 @@ def test_stream_usage_requires_complete_non_coercive_evidence() -> None:
             assert message in str(error)
         else:  # pragma: no cover - assertion failure path
             raise AssertionError(f"accepted invalid usage: {candidate!r}")
+
+
+def test_wave_forwards_independent_request_controls_and_preserves_salt() -> None:
+    import json
+    from unittest import mock
+    from benchmarks import bench_restore_interference as benchmark
+
+    for skip_read, skip_write in ((False, False), (False, True), (True, False), (True, True)):
+        with mock.patch.object(benchmark.urllib.request, "urlopen", side_effect=RuntimeError("captured")) as send:
+            try:
+                benchmark.run_wave(
+                    api="http://unused", model="model", prompts=[("prompt", "fresh-salt")],
+                    output_tokens=8, concurrency=1, seed_base=0,
+                    skip_read=skip_read, skip_write=skip_write,
+                )
+            except RuntimeError as error:
+                assert str(error) == "captured"
+            else:
+                raise AssertionError("request was not captured")
+        body = json.loads(send.call_args.args[0].data)
+        assert body["cache_salt"] == "fresh-salt"
+        expected = {}
+        if skip_read:
+            expected["spoolcache.skip_read"] = True
+        if skip_write:
+            expected["spoolcache.skip_write"] = True
+        assert body.get("kv_transfer_params", {}) == expected

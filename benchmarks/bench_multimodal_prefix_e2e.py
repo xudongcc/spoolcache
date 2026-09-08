@@ -6,7 +6,7 @@ identical bytes and do not depend on a mutable remote URL.  Repeat
 ``--media-kind`` and ``--media-file`` in matching order to qualify a mixed
 prompt.  ``--target-span`` uses vLLM's public ``/tokenize`` endpoint to choose
 the smallest synthetic prompt whose token count reaches the requested HMA
-boundary.  The same command can then be used for producer, bypass-control,
+boundary.  The same command can then be used for producer, cold-control,
 restore, and post-restart runs.
 """
 
@@ -108,10 +108,11 @@ def _request_body(
     padding: str,
     labels: str,
     cache_salt: str,
-    bypass: bool,
+    skip_write: bool,
     phase: str,
     consumer_extension: str = "",
     max_tokens: int = 128,
+    skip_read: bool = False,
 ) -> dict[str, Any]:
     choices = [label.strip() for label in labels.split(",") if label.strip()]
     if not choices or len(choices) != len(set(choices)):
@@ -177,8 +178,13 @@ def _request_body(
         # explicit label avoids accepting an empty reasoning-model envelope.
         "structured_outputs": {"choice": choices},
     }
-    if bypass:
-        body["kv_transfer_params"] = {"spoolcache_bypass": True}
+    controls = {}
+    if skip_read:
+        controls["spoolcache.skip_read"] = True
+    if skip_write:
+        controls["spoolcache.skip_write"] = True
+    if controls:
+        body["kv_transfer_params"] = controls
     return body
 
 
@@ -365,7 +371,14 @@ def main() -> None:
         ),
     )
     parser.add_argument("--alignment", type=int, required=True)
-    parser.add_argument("--bypass-spoolcache", action="store_true")
+    parser.add_argument(
+        "--skip-write", action="store_true",
+        help="Skip persistent writes; use a fresh --cache-salt for a cold control.",
+    )
+    parser.add_argument(
+        "--skip-read", action="store_true",
+        help="Skip persistent reads; writes and GPU prefix caching remain enabled.",
+    )
     parser.add_argument("--reset-local", action="store_true")
     parser.add_argument("--dry-tokenize", action="store_true")
     parser.add_argument("--expect-cached-tokens", type=int)
@@ -412,7 +425,8 @@ def main() -> None:
             padding=padding,
             labels=args.labels,
             cache_salt=args.cache_salt,
-            bypass=args.bypass_spoolcache,
+            skip_write=args.skip_write,
+            skip_read=args.skip_read,
             phase=phase,
             consumer_extension=consumer_extension,
             max_tokens=args.max_tokens,
@@ -544,7 +558,8 @@ def main() -> None:
                     consumer_extension_padding.encode()
                 ),
                 "phase": args.phase,
-                "bypass_spoolcache": args.bypass_spoolcache,
+                "skip_write": args.skip_write,
+                "skip_read": args.skip_read,
                 "wall_seconds": round(elapsed, 6),
                 "output": normalized,
                 "oracle_label": oracle_label,

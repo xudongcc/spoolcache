@@ -44,9 +44,9 @@ class _PinnedSlot:
 class PinnedTensorPool:
     """One fixed allocation of Torch pinned host tensors.
 
-    CUDA only requires these tensors to be pinned.  O_DIRECT alignment belongs
-    to the separate I/O pool; a future shared-pool fast path must prove both
-    properties rather than assuming Torch's pinned allocator is page aligned.
+    CUDA requires these tensors to be pinned. O_DIRECT alignment belongs to
+    the separate I/O pool; Torch's pinned allocator does not guarantee the
+    page alignment required by the payload storage path.
     """
 
     def __init__(self, *, slot_bytes: int, slot_count: int) -> None:
@@ -171,7 +171,7 @@ def bind_group_owned_kv_caches(
     missing = sorted(owned_set - registered_set)
     if missing:
         raise LayoutError(
-            "registered KV layers differ from the HMA profile: "
+            "registered KV layers differ from the discovered HMA layout: "
             f"missing={missing}, extra={sorted(registered_set - owned_set)}"
         )
 
@@ -247,7 +247,7 @@ class TorchPageMover:
             missing = sorted(expected - set(kv_caches))
             extra = sorted(set(kv_caches) - expected)
             raise LayoutError(
-                "registered KV layers differ from the HMA profile: "
+                "registered KV layers differ from the discovered HMA layout: "
                 f"missing={missing}, extra={extra}"
             )
         largest_page = max(

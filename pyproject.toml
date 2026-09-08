@@ -22,11 +22,11 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/xudongcc/spoolcache"
 Repository = "https://github.com/xudongcc/spoolcache.git"
-Documentation = "https://github.com/xudongcc/spoolcache/blob/main/docs/SPOOLCACHE_DESIGN.md"
+Documentation = "https://github.com/xudongcc/spoolcache/blob/main/docs/README.md"
 Issues = "https://github.com/xudongcc/spoolcache/issues"
 
 [project.scripts]
-spoolcache-maintenance = "spoolcache.maintenance:main"
+spoolcache = "spoolcache.maintenance:main"
 
 [project.optional-dependencies]
 test = ["pytest>=8"]

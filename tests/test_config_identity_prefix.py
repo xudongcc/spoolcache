@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import hashlib
+import os
+import struct
 import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
-from spoolcache.config import AccessMode, SpoolCacheConfig
+from spoolcache.config import SpoolCacheConfig
 from spoolcache.errors import ConfigurationError, IdentityError
 from spoolcache.hma import VLLM_RUNTIME_KV_PROFILE
 from spoolcache.identity import (
@@ -22,22 +26,39 @@ from spoolcache.prefix import (
 
 
 class ConfigIdentityPrefixTests(unittest.TestCase):
-    def _config(self, root: Path, **extra: object) -> SpoolCacheConfig:
+    def test_default_path_is_resolved_for_each_configuration(self) -> None:
+        for home in ("/home/first", "/home/second"):
+            with self.subTest(home=home), mock.patch.dict(os.environ, {"HOME": home}):
+                expected = Path(home) / ".cache" / "spoolcache"
+                self.assertEqual(SpoolCacheConfig().path, expected)
+                self.assertEqual(SpoolCacheConfig.from_mapping({}).path, expected)
+                self.assertEqual(
+                    SpoolCacheConfig.from_mapping({"spoolcache_path": "~/custom"}).path,
+                    Path(home) / "custom",
+                )
+
+    def _config(self, cache_path: Path, **extra: object) -> SpoolCacheConfig:
         raw: dict[str, object] = {
-            "spoolcache_root": root,
-            "spoolcache_direct_io": "disabled",
+            "spoolcache_path": cache_path,
         }
         raw.update(extra)
         return SpoolCacheConfig.from_mapping(raw)
 
-    def test_strict_config_and_enabled_data_path(self) -> None:
+    def test_strict_config(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config = self._config(Path(directory))
-            self.assertEqual(config.access_mode, AccessMode.DISABLED)
             self.assertEqual(config.low_watermark_bytes, 180 * 1024**3)
             with self.assertRaisesRegex(ConfigurationError, "unknown"):
                 self._config(Path(directory), surprise=True)
             for removed in (
+                "spoolcache_deployment_namespace",
+                "deployment_namespace",
+                "spoolcache_access_mode",
+                "access_mode",
+                "spoolcache_max_bytes",
+                "max_bytes",
+                "spoolcache_root",
+                "root",
                 "spoolcache_profile",
                 "spoolcache_expected_vllm_version",
                 "spoolcache_qualified_gpu_mover",
@@ -59,21 +80,43 @@ class ConfigIdentityPrefixTests(unittest.TestCase):
                 with self.subTest(removed=removed):
                     with self.assertRaisesRegex(ConfigurationError, "unknown"):
                         self._config(Path(directory), **{removed: "removed"})
-            enabled = self._config(
-                Path(directory),
-                spoolcache_access_mode="read-write",
-            )
-            self.assertEqual(enabled.access_mode, AccessMode.READ_WRITE)
 
     def test_low_watermark_is_a_bounded_internal_default(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config = self._config(
                 Path(directory),
-                spoolcache_max_bytes=10_001,
+                spoolcache_max_size=10_001 / 1024**3,
             )
             self.assertEqual(config.low_watermark_bytes, 9_000)
             with self.assertRaisesRegex(ConfigurationError, "at least 2"):
-                self._config(Path(directory), spoolcache_max_bytes=1)
+                self._config(Path(directory), spoolcache_max_size=1 / 1024**3)
+
+    def test_capacity_in_gb_converts_to_integer_bytes(self) -> None:
+        for size, expected in (
+            (200, 214_748_364_800),
+            (0.5, 536_870_912),
+            (32.5, 34_896_609_280),
+            (2 / 1024**3, 2),
+            (2.9 / 1024**3, 2),
+        ):
+            with self.subTest(size=size):
+                for key in ("max_size", "spoolcache_max_size"):
+                    config = SpoolCacheConfig.from_mapping({key: size})
+                    self.assertEqual(config.max_size, size)
+                    self.assertEqual(config.max_bytes, expected)
+                    self.assertIs(type(config.max_bytes), int)
+                    self.assertEqual(config.low_watermark_bytes, expected * 9 // 10)
+
+    def test_capacity_rejects_invalid_types_values_and_duplicate_aliases(self) -> None:
+        for value in (True, False, "200", None, [], {}, float("nan"),
+                      float("inf"), float("-inf"), 0, -1, 1e-9):
+            with self.subTest(value=value):
+                with self.assertRaises(ConfigurationError):
+                    SpoolCacheConfig.from_mapping({"spoolcache_max_size": value})
+                with self.assertRaises(ConfigurationError):
+                    SpoolCacheConfig(max_size=value)
+        with self.assertRaisesRegex(ConfigurationError, "duplicate"):
+            SpoolCacheConfig.from_mapping({"max_size": 1, "spoolcache_max_size": 2})
 
     def test_deployment_digest_is_mapping_order_independent(self) -> None:
         common = dict(
@@ -212,19 +255,17 @@ class ConfigIdentityPrefixTests(unittest.TestCase):
         with self.assertRaises(IdentityError):
             RankIdentity("a" * 64, "0", "b" * 64, "c" * 64)  # type: ignore[arg-type]
 
-    def test_prefix_digest_is_exact_namespaced_and_incremental(self) -> None:
+    def test_prefix_digest_is_exact_salted_and_incremental(self) -> None:
         tokens = list(range(768))
         first = prefix_digests(
             tokens,
             deployment_digest="d" * 64,
-            namespace="tenant-a",
             cache_salt="salt",
             chunk_tokens=256,
         )
         selected = prefix_digests(
             tokens,
             deployment_digest="d" * 64,
-            namespace="tenant-a",
             cache_salt="salt",
             chunk_tokens=256,
             boundaries=(256, 768),
@@ -233,17 +274,36 @@ class ConfigIdentityPrefixTests(unittest.TestCase):
         other = prefix_digests(
             tokens,
             deployment_digest="d" * 64,
-            namespace="tenant-a",
             cache_salt="other",
             chunk_tokens=256,
         )
         self.assertNotEqual(first[0].digest, other[0].digest)
+        other_deployment = prefix_digests(
+            tokens, deployment_digest="e" * 64, cache_salt="salt", chunk_tokens=256
+        )
+        self.assertTrue(all(a.digest != b.digest for a, b in zip(first, other)))
+        self.assertTrue(all(a.digest != b.digest for a, b in zip(first, other_deployment)))
         with self.assertRaisesRegex(ValueError, "token IDs"):
             prefix_digests(
                 [*range(256), "bad"],  # type: ignore[list-item]
                 deployment_digest="d" * 64,
-                namespace="tenant-a",
             )
+
+    def test_prefix_keys_do_not_reuse_legacy_namespace_encoding(self) -> None:
+        tokens = list(range(256))
+        current = prefix_digests(tokens, deployment_digest="d" * 64, cache_salt="salt")
+        for namespace in (b"", b"default", b"tenant-a"):
+            with self.subTest(namespace=namespace):
+                legacy_seed = hashlib.sha256(
+                    b"spoolcache-exact-prefix/v1\x00" + bytes.fromhex("d" * 64)
+                    + struct.pack("<Q", len(namespace)) + namespace
+                    + struct.pack("<Q", 4) + b"salt"
+                ).digest()
+                legacy = hashlib.sha256(
+                    legacy_seed + struct.pack("<Q", len(tokens))
+                    + b"".join(struct.pack("<q", token) for token in tokens)
+                ).hexdigest()
+                self.assertNotEqual(current[0].digest, legacy)
 
     def test_alignment_leaves_one_token_for_forward(self) -> None:
         self.assertEqual(
@@ -292,7 +352,6 @@ class ConfigIdentityPrefixTests(unittest.TestCase):
         tokens = list(range(768))
         common = {
             "deployment_digest": "e" * 64,
-            "namespace": "vision",
             "chunk_tokens": 256,
             "boundaries": (256, 512, 768),
         }
@@ -318,7 +377,6 @@ class ConfigIdentityPrefixTests(unittest.TestCase):
             prefix_digests(
                 list(range(256)),
                 deployment_digest="f" * 64,
-                namespace="vision",
                 multimodal_features=(
                     MultimodalFeatureIdentity("image", "sha256:image", 200, 80),
                 ),

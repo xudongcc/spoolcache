@@ -58,6 +58,38 @@ class GemmaPp2DevLauncherTests(unittest.TestCase):
         for removed in ("source_sync", "SOURCE_LINK", "PYTHONPATH", "snapshot.XXXXXX"):
             self.assertNotIn(removed, self.source)
 
+    def test_cache_path_resolves_against_each_hosts_home(self) -> None:
+        resolver = "spoolcache_host_path() {" + self.source.split(
+            "spoolcache_host_path() {", 1
+        )[1].split("\n}\n", 1)[0] + "\n}\n"
+        default = next(
+            line for line in self.source.splitlines()
+            if line.startswith("SPOOLCACHE_PATH=")
+        )
+        for raw, suffix, valid in (
+            (None, ".cache/spoolcache", True),
+            ("~/custom", "custom", True),
+            ("/mnt/nvme/spoolcache", None, True),
+            ("", None, False),
+            ("relative", None, False),
+            ("/cache/$(false)", None, False),
+        ):
+            for home in ("/home/head", "/home/worker"):
+                with self.subTest(raw=raw, home=home):
+                    environment = {"PATH": "/usr/bin:/bin"}
+                    if raw is not None:
+                        environment["SPOOLCACHE_PATH"] = raw
+                    result = subprocess.run(
+                        ["bash", "-c", "set -eu\n" + resolver + default
+                         + '\nspoolcache_host_path "$SPOOLCACHE_PATH" "$1"',
+                         "test", home],
+                        env=environment, capture_output=True, text=True,
+                    )
+                    self.assertEqual(result.returncode, 0 if valid else 2, result.stderr)
+                    if valid:
+                        expected = f"{home}/{suffix}" if suffix else raw
+                        self.assertEqual(result.stdout.strip(), expected)
+
     def test_release_gate_freezes_one_image_and_rejects_missing_wheels(self) -> None:
         gate = self.source.split("    local head_image_id worker_image_id", 1)[1].split(
             "    ensure_not_running", 1
