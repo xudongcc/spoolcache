@@ -25,18 +25,18 @@ was carried forward through that explicit equality check, not the version string
 | --- | --- |
 | [summary.json](summary.json) | Overall scope, artifact identities, results and limitations. |
 | [release.json](release.json) | Clean-commit candidate build receipt. |
-| [semantic-release-rehearsal.json](semantic-release-rehearsal.json) | Isolated version/build/install rehearsal; not publication proof. |
-| [g6-clean-install-results.json](g6-clean-install-results.json) | Fresh candidate installs and tamper rejection. |
-| [g6-runtime-stacks.json](g6-runtime-stacks.json) | Base versus candidate vLLM/Torch/CUDA/NCCL comparison. |
-| [g6-image-quorum.json](g6-image-quorum.json) | Candidate image equality across participants. |
-| [g6-official-install.json](g6-official-install.json), [g6-worker-install-results.json](g6-worker-install-results.json) | Candidate package authentication in runtime images. |
-| [g6-runtime-results.json](g6-runtime-results.json) | Installed-wheel runtime test results. |
-| [live-pp1.json](live-pp1.json), [live-pp2.json](live-pp2.json) | Text/media controls, restore, restart, payload and fault observations. |
+| [semantic-release-rehearsal.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/semantic-release-rehearsal.json) | Isolated version/build/install rehearsal; not publication proof. |
+| [g6-clean-install-results.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/g6-clean-install-results.json) | Fresh candidate installs and tamper rejection. |
+| [g6-runtime-stacks.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/g6-runtime-stacks.json) | Base versus candidate vLLM/Torch/CUDA/NCCL comparison. |
+| [g6-image-quorum.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/g6-image-quorum.json) | Candidate image equality across participants. |
+| [g6-official-install.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/g6-official-install.json), [g6-worker-install-results.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/g6-worker-install-results.json) | Candidate package authentication in runtime images. |
+| [g6-runtime-results.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/g6-runtime-results.json) | Installed-wheel runtime test results. |
+| [live-pp1.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/live-pp1.json), [live-pp2.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/live-pp2.json) | Text/media controls, restore, restart, payload and fault observations. |
 | [negative-observations.json](negative-observations.json) | Failed controls, upstream limits and fault-test repetitions. |
-| [raw-qualification.json](raw-qualification.json), [raw archive](raw-qualification.tar.gz) | Raw evidence and archive identity. |
+| [raw-qualification.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/raw-qualification.json), [raw archive](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/raw-qualification.tar.gz) | Raw evidence and archive identity. |
 | [publication.json](publication.json) | GitHub/PyPI bytes from successful workflow run 34180558915. |
-| [pypi-install.json](pypi-install.json) | Fresh installation of the public wheel. |
-| [published-installations.json](published-installations.json) | Public wheel authentication in four images on both nodes and candidate payload equality. |
+| [pypi-install.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/pypi-install.json) | Fresh installation of the public wheel. |
+| [published-installations.json](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-g6/published-installations.json) | Public wheel authentication in four images on both nodes and candidate payload equality. |
 
 ## Recorded checks
 
@@ -82,5 +82,5 @@ no unresolved P1/P2 issues at that artifact boundary. Subsequent local changes
 need their own qualification; see [Migration](../../MIGRATION.md).
 
 Media bytes are not redistributed. [Lab qualification](../../LAB.md#media-fixtures)
-records the fixture origins and hashes. The [documentation archive](../../archive/README.md)
+records the fixture origins and hashes. The [documentation archive](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/archive/README.md)
 preserves the original G6 narrative; machine receipts and raw evidence remain unchanged.

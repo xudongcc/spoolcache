@@ -1,5 +1,8 @@
 # Current-code Gemma regression, 2026-09-08
 
+Historical record for the pre-0.2.0 candidate: references to "current code" below
+mean the artifact tested on this date, not the 0.3.0 token-file backend.
+
 The overall no-regression qualification has an **unresolved PP=2 mixed-input
 output difference**. Do not treat the fixed-fixture pass as resolving it.
 
@@ -50,18 +53,18 @@ recognition accuracy, new fault recovery, maximum context or throughput gains.
 
 ## Evidence
 
-- [Summary](summary.json), [host test log](host-tests-final.log),
+- [Summary](summary.json), [host test log](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-current-gemma/host-tests-final.log),
   [head installed wheel](installed-wheel.json), [worker installed wheel](worker-installed-wheel.json).
-- [PP=1 payloads after restart](pp1/post-restart-payload-verification.json)
-  and [request controls](pp1/request-flags.json).
-- [PP=2 fixed runner summary](pp2-fixed/summary.json),
-  [payloads after restart](pp2-fixed/post-restart-payload-verification.json),
-  [request controls](pp2-fixed/request-flags.json).
-- [Earlier PP=2 failure](pp2-exploratory-failure/failure.json),
-  [interpretation](pp2-exploratory-failure/interpretation.json),
-  [authenticated payloads](pp2-exploratory-failure/restore-payload-verification.json).
-- [Raw logs, runner snapshots and authenticated candidate wheel](raw-evidence.tar.gz),
-  [archive SHA-256](raw-evidence.sha256).
+- [PP=1 payloads after restart](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-current-gemma/pp1/post-restart-payload-verification.json)
+  and [request controls](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-current-gemma/pp1/request-flags.json).
+- [PP=2 fixed runner summary](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-current-gemma/pp2-fixed/summary.json),
+  [payloads after restart](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-current-gemma/pp2-fixed/post-restart-payload-verification.json),
+  [request controls](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-current-gemma/pp2-fixed/request-flags.json).
+- [Earlier PP=2 failure](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-current-gemma/pp2-exploratory-failure/failure.json),
+  [interpretation](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-current-gemma/pp2-exploratory-failure/interpretation.json),
+  [authenticated payloads](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-current-gemma/pp2-exploratory-failure/restore-payload-verification.json).
+- [Raw logs, runner snapshots and authenticated candidate wheel](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-current-gemma/raw-evidence.tar.gz),
+  [archive SHA-256](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-current-gemma/raw-evidence.sha256).
 - [Restored lab state](restoration.json).
 
 PP=1 used the retained temporary orchestration; the maintained fixed runner was

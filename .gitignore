@@ -11,3 +11,4 @@ dist/
 .venv/
 venv/
 .env.gemma-pp2
+results/*.json

@@ -19,8 +19,8 @@ SpoolCache functionality.
    status, acceptance criteria, dependencies, and completion receipts current;
    do not leave completed or newly discovered work only in a conversation.
 4. Read `docs/PERFORMANCE_IMPLEMENTATION_NOTES.md` before optimizing or running
-   performance tests. Read `docs/BENCHMARK_2026-09-04.md` before comparing with
-   the qualified DeepSeek baseline.
+   performance tests. Before comparing with the qualified DeepSeek baseline,
+   read the historical benchmark linked from `docs/receipts/HISTORICAL_RAW.md`.
 5. Read [references/live-lab.md](references/live-lab.md) before touching the
    two-node service or its private environment file.
 6. Inspect `git status` in every repository involved. Preserve unrelated and

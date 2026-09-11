@@ -29,16 +29,13 @@ and experiment tooling are indexed in the performance notes and local backup.
 ## Evidence
 
 [Performance notes](PERFORMANCE_IMPLEMENTATION_NOTES.md) index the engineering
-results and their limits. The [2026-09-04 benchmark](BENCHMARK_2026-09-04.md)
-is one historical matched comparison. Review summaries cover
-[2026-09-05](CODE_REVIEW_2026-09-05.md),
-[2026-09-06](CODE_REVIEW_2026-09-06.md) and
-[G4](CODE_REVIEW_2026-09-07_G4.md).
+results and their limits. The [final token-file evidence](receipts/2026-09-11-token-files/README.md)
+records the source review and qualification relevant to the current backend.
 
 The [receipt index](receipts/README.md) separates machine evidence from current
 instructions. [G6](receipts/2026-09-08-g6/README.md) records the first release.
-[Archived documentation](archive/README.md) preserves the exact pre-rewrite
-narratives, including superseded experiments and failures.
+[Historical evidence](receipts/HISTORICAL_RAW.md) locates the older benchmarks,
+reviews and raw outputs in release history and verified local backups.
 
 Specific models, machines and network interfaces belong to
 [lab qualification](LAB.md). They are test fixtures, not package requirements.

@@ -46,5 +46,5 @@ this reference does not assert that a checkout is clean or synchronized.
   authentication. One HTTP health response or cached-token counter is
   insufficient proof of persistent reuse or distributed recovery.
 
-The [original reference](../../../../docs/archive/README.md) is archived for
+The [original reference](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/archive/README.md) is archived for
 provenance. Use the maintained guide for current commands and path settings.

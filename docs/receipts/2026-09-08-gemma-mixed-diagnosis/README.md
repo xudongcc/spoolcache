@@ -71,7 +71,7 @@ the reverse label change with the same media prefix.
 The original and reproduced prefixes have identical object descriptors and
 SHA-256 digests: all 12 objects on PP rank 0 and all 3 on PP rank 1. Both entries
 were independently authenticated in their respective tests. See the
-[comparison](original-prefix-payload-comparison.json). The missing original
+[comparison](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/original-prefix-payload-comparison.json). The missing original
 suffix nonce does not require guessing the persisted prefix bytes.
 
 ## Reproduce and review
@@ -84,18 +84,18 @@ change persistent manifests. See [the command](../../DEVELOPMENT.md#diagnose-a-m
 A successful diagnostic exit means evidence was collected and classified;
 `divergence-reproduced-by-native-cache` is not an e2e correctness pass.
 
-- [Machine summary](summary.json), [current default diagnostic](maintained-default/summary.json),
-  [default inputs and exact token sequences](maintained-default/inputs.json).
-- [Both-rank payload verification](maintained-default/restore-payload-verification.json).
-- [Connector-free result](no-connector-native/summary.json) and
-  [both containers' image/command/log checks](no-connector-runtime.json).
-- [Batch-invariant same-span native/disk control](invariant-variant-12/native-media-boundary/summary.json).
-- [Host suite](host-tests.log): 292 passed, 12 runtime-dependent skips, 373 subtests.
+- [Machine summary](summary.json), [current default diagnostic](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/maintained-default/summary.json),
+  [default inputs and exact token sequences](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/maintained-default/inputs.json).
+- [Both-rank payload verification](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/maintained-default/restore-payload-verification.json).
+- [Connector-free result](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/no-connector-native/summary.json) and
+  [both containers' image/command/log checks](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/no-connector-runtime.json).
+- [Batch-invariant same-span native/disk control](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/invariant-variant-12/native-media-boundary/summary.json).
+- [Host suite](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/host-tests.log): 292 passed, 12 runtime-dependent skips, 373 subtests.
   The four new CPU tests reject unequal spans/probabilities and distinguish label
   equality from numerical equality. Package code did not change, so the prior
   installed-wheel runtime qualification remains separately scoped evidence.
-- [Artifact/environment state](state.json), [inspected runtime-source hashes](inspected-runtime-source.json),
-  [raw logs/tool snapshots](raw-evidence.tar.gz), [archive digest](raw-evidence.sha256).
+- [Artifact/environment state](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/state.json), [inspected runtime-source hashes](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/inspected-runtime-source.json),
+  [raw logs/tool snapshots](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/raw-evidence.tar.gz), [archive digest](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/receipts/2026-09-08-gemma-mixed-diagnosis/raw-evidence.sha256).
 - [Restoration](restoration.json): original image tags restored, both GPUs idle,
   no active model services, all persistent roots retained.
 

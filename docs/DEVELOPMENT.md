@@ -273,7 +273,7 @@ receipts describe the recorded experiments only.
 Report matched cold, miss/store and persistent-hit measurements, raw samples,
 medians, image/model revisions and resource limits. A microbenchmark does not
 establish end-to-end TTFT or concurrent decode performance. See the historical
-[benchmark](BENCHMARK_2026-09-04.md) and [engineering notes](PERFORMANCE_IMPLEMENTATION_NOTES.md).
+[benchmark](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/BENCHMARK_2026-09-04.md) and [engineering notes](PERFORMANCE_IMPLEMENTATION_NOTES.md).
 
 Increase context length gradually while monitoring all hosts' liveness,
 `MemAvailable` and `SwapFree`. Stop at the recorded safety boundary; a connector

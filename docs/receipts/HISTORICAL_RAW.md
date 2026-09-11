@@ -1,9 +1,49 @@
 # Archived experiment evidence
 
 Intermediate experiment tools, bulk logs and superseded narratives are retained
-locally. The PR contains current runtime/tests and the
+in release history or local backups as described below. The working tree contains
+current runtime/tests and the
 [final evidence summary](2026-09-11-token-files/README.md). Historical identities
 remain tied to their original artifacts.
+
+## After the 0.3.0 release
+
+The post-release cleanup removes 282 historical files (3,060,254 bytes): raw
+request/payload-verification rows, logs, old archives, three review documents,
+the 2026-09-04 benchmark and three generated interference results. Current
+runtime code, tests, benchmark tools, final summaries and artifact identities
+remain in the working tree. The cleanup does not change the published release.
+
+Every removed file is available in the
+[v0.3.0 source tree](https://github.com/xudongcc/spoolcache/tree/v0.3.0), at commit
+`3c2c2fbadd3fc47e759b88b2b49a0fbf7d53474b`. Links from retained narratives to
+removed details now point to that release. Historical paths inside unchanged
+machine receipts should also be resolved against that tree.
+
+Historical entry points:
+
+- [2026-09-04 DeepSeek benchmark](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/BENCHMARK_2026-09-04.md).
+- Reviews from [2026-09-05](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/CODE_REVIEW_2026-09-05.md),
+  [2026-09-06](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/CODE_REVIEW_2026-09-06.md)
+  and [G4](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/CODE_REVIEW_2026-09-07_G4.md).
+- [Pre-rewrite documentation archive](https://github.com/xudongcc/spoolcache/blob/v0.3.0/docs/archive/README.md).
+
+An additional local backup is at
+`/root/projects/xudongcc/spoolcache-backups/2026-09-11-post-release-cleanup`:
+
+- `before-cleanup.bundle` passes `git bundle verify` and preserves the release
+  tree on `codex/post-030-file-cleanup`. SHA-256:
+  `6916bfda685748a92d35ae184b40b161cc08f6d79443f072951d0cba1193b389`.
+- `removed-files.tar.gz` was compared byte-for-byte with all 282 originals
+  before deletion. SHA-256:
+  `537448037f3f8fbf4f8c2596fc4b6c6c011de22fe4ffd601c96d1834a899691d`.
+- `removal-candidates.json` records each original path, size and SHA-256.
+
+To inspect the complete historical tree without changing the current checkout:
+
+```bash
+git worktree add --detach /tmp/spoolcache-v0.3.0-evidence v0.3.0
+```
 
 ## Before the 0.3.0 cleanup
 

@@ -15,6 +15,10 @@ experiment narratives. Complete originals and raw tools/results remain in the
 
 ## Qualification groups
 
+These groups predate the token-file backend. Their summaries and artifact
+identities remain here; detailed rows and logs are available through
+[historical evidence](HISTORICAL_RAW.md). They do not qualify 0.3.0.
+
 | Evidence | What it establishes |
 | --- | --- |
 | [Million-record namespace](2026-09-06-g3d-namespace-million.json) | Bounded namespace stress results for the recorded implementation. |
@@ -25,10 +29,11 @@ experiment narratives. Complete originals and raw tools/results remain in the
 | [Gemma PP=1](2026-09-07-gemma4-text-multimodal-cross-restart-summary.json) | Text and multimodal persistent reuse on the pinned fixture. |
 | [G4 PP=2](2026-09-07-g4-gemma4-pp2-cross-restart-summary.json) | Stage-local ownership, full-rank restore and cross-restart evidence. |
 | [Gemma mixed-output diagnosis](2026-09-08-gemma-mixed-diagnosis/README.md) | Reproducible same-span native/disk comparison and runtime reproducibility limits. |
-| [Current-code Gemma](2026-09-08-current-gemma/README.md) | Installed current-code candidate and fixed regression; includes an unresolved PP=2 mixed-output difference. |
+| [Pre-0.2.0 Gemma candidate](2026-09-08-current-gemma/README.md) | Installed candidate and fixed regression; includes an unresolved PP=2 mixed-output difference. |
 | [G6 release](2026-09-08-g6/README.md) | Candidate qualification, first public release and installed-artifact authentication. |
 
-Other files retain individual performance, scrub, fault and recovery results.
+The historical archive retains individual performance, scrub, fault and recovery
+results.
 [Performance notes](../PERFORMANCE_IMPLEMENTATION_NOTES.md) explain their context;
 [Goals](../TODO_GOALS.md) distinguishes completed work from remaining qualification.
 
@@ -48,7 +53,7 @@ separately built candidate. A release or matching version string alone does not
 carry live qualification from one artifact to another. Published artifacts are
 listed on [GitHub Releases](https://github.com/xudongcc/spoolcache/releases).
 
-Machine JSON and raw archives are retained unchanged during the documentation
-rewrite. The [documentation archive](../archive/README.md) preserves the previous
-prose, including failed experiments and superseded procedures. New tests should
+Retained machine summaries are unchanged. Bulk raw evidence and the previous
+prose, including failed experiments and superseded procedures, are preserved
+in [release history and verified backups](HISTORICAL_RAW.md). New tests should
 produce separately identified receipts instead of rewriting historical outcomes.
