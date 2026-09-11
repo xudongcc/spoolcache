@@ -62,17 +62,21 @@ The disks remain rank-local; SpoolCache does not replicate payloads between host
 
 ## Build a serving image
 
+The published multi-architecture image and automatic build process are described
+in [Container publication](RELEASE.md#container-publication). `Dockerfile` is the
+production entry point; Compose uses `Dockerfile.development` for testing.
+
 Obtain a wheel and trusted `release.json` from a release or follow the clean-tree
 candidate build in [Release](RELEASE.md#build-a-local-candidate). Export the wheel
 path, SHA-256 and source commit as shown there. Then extend the qualified runtime:
 
 ```bash
-: "${PINNED_RUNTIME_IMAGE:?Set the qualified runtime image digest}"
+: "${BASE_IMAGE:?Set the upstream runtime image tag}"
 : "${SPOOLCACHE_WHEEL:?Set the wheel path relative to this build context}"
 : "${SPOOLCACHE_WHEEL_SHA256:?Set its trusted SHA-256}"
 : "${SPOOLCACHE_COMMIT:?Set the source commit from release.json}"
-docker build -f Dockerfile.release \
-  --build-arg BASE_IMAGE="$PINNED_RUNTIME_IMAGE" \
+docker build -f Dockerfile \
+  --build-arg BASE_IMAGE="$BASE_IMAGE" \
   --build-arg SPOOLCACHE_WHEEL="$SPOOLCACHE_WHEEL" \
   --build-arg SPOOLCACHE_WHEEL_SHA256="$SPOOLCACHE_WHEEL_SHA256" \
   --build-arg SPOOLCACHE_COMMIT="$SPOOLCACHE_COMMIT" \

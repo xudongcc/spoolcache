@@ -27,11 +27,57 @@ push to `main` or a manual dispatch on `main`:
    publish GitHub notes/assets.
 6. In the separate `pypi` job, download and authenticate the retained wheel,
    then publish it with OIDC. That job does not rebuild the package.
+7. Call the container workflow with that release's Git tag after PyPI succeeds.
+   Build and test both architectures before publishing the combined GHCR tag.
 
 Release concurrency is serialized. The GitHub release job has `contents: write`;
 only the PyPI job has `id-token: write`. Release actions are pinned by commit and
 tools by version in the workflow. Branch protection must allow the authorized
 release bot path; a failed push is not a reason to silently bypass protection.
+
+## Container publication
+
+[Dockerfile](../Dockerfile) builds the serving image; the development fixture
+uses [Dockerfile.development](../Dockerfile.development). The
+[container workflow](../.github/workflows/container.yml) owns `VLLM_VERSION` and
+passes `vllm/vllm-openai:v${VLLM_VERSION}` as `BASE_IMAGE`, without a digest.
+SpoolCache's version comes from the published Git tag, with the leading `v`
+removed. For example, vLLM `0.29.0` and SpoolCache tag `v0.3.0` publish:
+
+```text
+ghcr.io/xudongcc/vllm-openai-spoolcache:0.29.0-0.3.0
+```
+
+The workflow downloads the original GitHub release wheel and `release.json`,
+checks the receipt against the tag's commit, and checks the wheel checksum and
+embedded version. Both native runners (`ubuntu-24.04` for AMD64 and
+`ubuntu-24.04-arm` for ARM64) install that same universal wheel with `--no-deps`.
+Each image must pass installed-byte authentication, the real vLLM connector
+contract and the release's test suite. These runners do not qualify CUDA or
+model inference; GPU-only tests remain skipped.
+
+Each successful architecture is pushed under a run-specific build tag. The
+combined version tag is published only after both architectures pass, then its
+platform inventory is checked. Failed jobs can be rerun in the same workflow;
+the successful architecture's build tag remains available.
+
+Publication uses `GITHUB_TOKEN` with `packages: write`; no Docker Hub credentials
+or registry PAT are needed. Package visibility is managed separately in GHCR.
+For a private package, pulling requires an account with package read access.
+
+New SpoolCache releases call this reusable workflow directly because releases
+created by `GITHUB_TOKEN` do not trigger another ordinary release-event workflow.
+Changes to the production Dockerfile, container workflow or its input verifier
+on `main` rebuild the latest published release. To rebuild a specific release,
+run the `container` workflow on `main` with its Git tag:
+
+```bash
+gh workflow run container.yml --ref main -f tag=v0.3.0
+```
+
+Leaving `tag` empty selects the latest published release. Updating
+`VLLM_VERSION` in the workflow selects a new upstream version; the Dockerfile
+contains no default vLLM version. Retried builds resolve the upstream tag again.
 
 ## Commit and version policy
 

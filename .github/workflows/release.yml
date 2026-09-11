@@ -108,3 +108,13 @@ jobs:
           PY
       - name: Publish to PyPI using Trusted Publishing
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+
+  container:
+    needs: [release, pypi]
+    if: needs.release.outputs.released == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/container.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}

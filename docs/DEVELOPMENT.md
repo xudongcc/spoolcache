@@ -58,7 +58,7 @@ Do not modify vLLM to make the connector pass.
 
 ## Build the development image
 
-The [Dockerfile](../Dockerfile) pins the official vLLM 0.28.0 image by digest.
+The [Dockerfile.development](../Dockerfile.development) selects the official vLLM 0.28.0 image tag.
 It installs the supplied wheel and selected audio dependencies without resolving
 a replacement Torch/CUDA stack. Tests and benchmarks are included as tools;
 serving imports the wheel, not a bind-mounted `src/` directory.

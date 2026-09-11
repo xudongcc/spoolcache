@@ -1,40 +1,17 @@
-FROM vllm/vllm-openai:v0.28.0@sha256:61fc8a896b0a4fbbbdc063bc4b0dbc25ce98e02b5050c24aeb7830ac02039b14
-
-LABEL org.opencontainers.image.title="SpoolCache development runtime"
-LABEL org.opencontainers.image.description="Official vLLM runtime with the qualified SpoolCache wheel installed"
-
-WORKDIR /opt/spoolcache
-
+# Install the SAME prebuilt wheel into each deployment's existing runtime.
+# CI supplies the upstream vLLM image tag through BASE_IMAGE.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
 ARG SPOOLCACHE_WHEEL
 ARG SPOOLCACHE_WHEEL_SHA256
 ARG SPOOLCACHE_COMMIT
 COPY ${SPOOLCACHE_WHEEL} /opt/spoolcache-release/
-COPY tests ./tests
-COPY benchmarks ./benchmarks
-COPY scripts ./scripts
-
-# The official serving image keeps audio decoding optional.  These are the
-# decoder/resampler packages selected by vLLM 0.28's audio extra.  ``--no-deps``
-# preserves the official image's CUDA/Torch/NCCL stack unchanged.
-RUN python3 -m pip install --no-cache-dir --no-deps \
-    "av==18.1.0" \
-    "scipy==1.18.1" \
-    "soundfile==0.14.0" \
-    "soxr==1.1.0"
-
-# vLLM, CUDA, Torch, and their compiled dependencies come from the official
-# image.  Installing without dependency resolution preserves that qualified
-# runtime and keeps SpoolCache an out-of-tree connector.
 RUN test -n "$SPOOLCACHE_WHEEL_SHA256" && test -n "$SPOOLCACHE_COMMIT" \
     && cd /opt/spoolcache-release \
     && test "$(find . -name '*.whl' | wc -l)" -eq 1 \
     && printf '%s  %s\n' "$SPOOLCACHE_WHEEL_SHA256" *.whl | sha256sum -c - \
-    && python3 -m pip install --no-cache-dir --no-deps --force-reinstall ./*.whl
-
+    && python3 -m pip install --no-index --no-cache-dir --no-deps --force-reinstall ./*.whl
 LABEL io.spoolcache.wheel.sha256=$SPOOLCACHE_WHEEL_SHA256 \
-      io.spoolcache.commit=$SPOOLCACHE_COMMIT
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-WORKDIR /workspace
+      io.spoolcache.commit=$SPOOLCACHE_COMMIT \
+      org.opencontainers.image.source="https://github.com/xudongcc/spoolcache" \
+      org.opencontainers.image.title="vLLM OpenAI with SpoolCache"

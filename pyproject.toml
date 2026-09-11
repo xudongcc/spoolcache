@@ -32,7 +32,7 @@ test = ["pytest>=8"]
 
 [dependency-groups]
 # Host-side development remains lightweight.  The real CUDA/vLLM dependency
-# is pinned by Dockerfile because its wheel and CUDA ABI are platform-coupled.
+# is selected by Dockerfile.development because its wheel and CUDA ABI are platform-coupled.
 dev = [
   "huggingface-hub>=1,<2",
   "pytest>=8",

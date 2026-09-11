@@ -9,7 +9,7 @@ qualification inputs, not runtime support rules.
 
 | Purpose | Repository / entry point |
 | --- | --- |
-| Generic connector and single-GPU fixture | This repository's Dockerfile and Compose |
+| Generic connector and single-GPU fixture | This repository's Dockerfile.development and Compose |
 | Two-node functional fixture | [gemma-pp2-dev.sh](../scripts/gemma-pp2-dev.sh) |
 | DeepSeek runtime compatibility | [MiaAI-Lab DeepSeek deployment](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark) |
 | Qwen runtime compatibility | [MiaAI-Lab Qwen deployment](https://github.com/MiaAI-Lab/Qwen3.8-Flash-Next-Dual-DGX-Sparks) |
