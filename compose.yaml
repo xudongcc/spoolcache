@@ -4,7 +4,7 @@ services:
   vllm:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.development
       args:
         SPOOLCACHE_WHEEL: ${SPOOLCACHE_WHEEL:?Set path to the release wheel}
         SPOOLCACHE_WHEEL_SHA256: ${SPOOLCACHE_WHEEL_SHA256:?Set release wheel SHA-256}

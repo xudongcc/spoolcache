@@ -1,0 +1,174 @@
+name: container
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .github/workflows/container.yml
+      - scripts/container-release.py
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Published SpoolCache Git tag (empty = latest release)'
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Published SpoolCache Git tag'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  # Update only this value to select the upstream vLLM release; no image digest.
+  VLLM_VERSION: '0.29.0'
+  IMAGE: ghcr.io/xudongcc/vllm-openai-spoolcache
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    outputs:
+      image: ${{ env.IMAGE }}
+      base_image: ${{ steps.release.outputs.base_image }}
+      image_tag: ${{ steps.release.outputs.image_tag }}
+      version: ${{ steps.release.outputs.version }}
+      vllm_version: ${{ env.VLLM_VERSION }}
+      commit: ${{ steps.release.outputs.commit }}
+      wheel: ${{ steps.release.outputs.wheel }}
+      wheel_sha256: ${{ steps.release.outputs.wheel_sha256 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Download the original wheel from the release Git tag
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if [ -z "$RELEASE_TAG" ]; then
+            RELEASE_TAG=$(gh release view --json tagName --jq .tagName)
+          fi
+          [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          RELEASE_COMMIT=$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")
+          gh release download "$RELEASE_TAG" --pattern release.json --pattern '*.whl' --dir dist/release
+          python3 scripts/container-release.py --directory dist/release \
+            --tag "$RELEASE_TAG" --commit "$RELEASE_COMMIT" > "$RUNNER_TEMP/container-release.json"
+          jq -r 'to_entries[] | "\(.key)=\(.value)"' "$RUNNER_TEMP/container-release.json" >> "$GITHUB_OUTPUT"
+          echo "base_image=vllm/vllm-openai:v$VLLM_VERSION" >> "$GITHUB_OUTPUT"
+          echo "image_tag=$VLLM_VERSION-${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+          # Match runtime tests to the installed release, even when manually rebuilding an older tag.
+          git archive "$RELEASE_COMMIT" tests benchmarks scripts > dist/release/qualification.tar
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: container-inputs
+          path: dist/release/
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+  build:
+    needs: prepare
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      BASE_IMAGE: ${{ needs.prepare.outputs.base_image }}
+      SPOOLCACHE_WHEEL: dist/release/${{ needs.prepare.outputs.wheel }}
+      SPOOLCACHE_WHEEL_SHA256: ${{ needs.prepare.outputs.wheel_sha256 }}
+      SPOOLCACHE_COMMIT: ${{ needs.prepare.outputs.commit }}
+      SPOOLCACHE_VERSION: ${{ needs.prepare.outputs.version }}
+      ARCH: ${{ matrix.arch }}
+      STAGING_IMAGE: ${{ needs.prepare.outputs.image }}:build-${{ github.run_id }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Make room for the upstream CUDA image on the ephemeral runner
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker image prune --all --force
+          df -h /
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: container-inputs
+          path: dist/release/
+      - name: Build the native serving image
+        run: |
+          docker build --pull --platform "linux/$ARCH" -f Dockerfile \
+            --build-arg BASE_IMAGE="$BASE_IMAGE" \
+            --build-arg SPOOLCACHE_WHEEL="$SPOOLCACHE_WHEEL" \
+            --build-arg SPOOLCACHE_WHEEL_SHA256="$SPOOLCACHE_WHEEL_SHA256" \
+            --build-arg SPOOLCACHE_COMMIT="$SPOOLCACHE_COMMIT" \
+            --tag "$STAGING_IMAGE" .
+      - name: Authenticate installed bytes and test the real vLLM contract
+        run: |
+          mkdir "$RUNNER_TEMP/qualification"
+          tar -xf dist/release/qualification.tar -C "$RUNNER_TEMP/qualification"
+          docker run --rm --entrypoint bash \
+            -e SPOOLCACHE_WHEEL_SHA256 -e SPOOLCACHE_VERSION -e VLLM_VERSION \
+            -e PYTHONDONTWRITEBYTECODE=1 \
+            -v "$RUNNER_TEMP/qualification:/qualification:ro" -w /qualification \
+            "$STAGING_IMAGE" -euo pipefail -c '
+              python3 benchmarks/verify_release_install.py \
+                --wheel /opt/spoolcache-release/*.whl --sha256 "$SPOOLCACHE_WHEEL_SHA256"
+              python3 - <<"PY"
+          import dataclasses, importlib.metadata, json, os
+          from spoolcache.vllm.compat import verify_vllm_runtime
+          from spoolcache.vllm.connector import SpoolCacheConnector
+          from vllm.v1.kv_cache_interface import get_kv_cache_spec_kind
+          assert importlib.metadata.version("spoolcache") == os.environ["SPOOLCACHE_VERSION"]
+          assert importlib.metadata.version("vllm") == os.environ["VLLM_VERSION"]
+          receipt = verify_vllm_runtime(connector_type=SpoolCacheConnector,
+                                        spec_kind_resolver=get_kv_cache_spec_kind)
+          print(json.dumps(dataclasses.asdict(receipt), sort_keys=True))
+          PY
+              python3 -m unittest discover -s tests -v
+              spoolcache --help
+            '
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push only the tested architecture
+        run: docker push "$STAGING_IMAGE"
+
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    concurrency:
+      group: container-publish-${{ needs.prepare.outputs.image_tag }}
+      cancel-in-progress: false
+    env:
+      TARGET_IMAGE: ${{ needs.prepare.outputs.image }}:${{ needs.prepare.outputs.image_tag }}
+      STAGING_PREFIX: ${{ needs.prepare.outputs.image }}:build-${{ github.run_id }}
+    steps:
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish the combined ARM64 and AMD64 tag
+        run: |
+          docker buildx imagetools create --tag "$TARGET_IMAGE" \
+            "$STAGING_PREFIX-amd64" "$STAGING_PREFIX-arm64"
+          docker buildx imagetools inspect "$TARGET_IMAGE" --raw > "$RUNNER_TEMP/manifest.json"
+          jq -e '[.manifests[].platform | "\(.os)/\(.architecture)"] | sort == ["linux/amd64", "linux/arm64"]' \
+            "$RUNNER_TEMP/manifest.json"
+          echo "Published: \`$TARGET_IMAGE\` (linux/amd64, linux/arm64)" >> "$GITHUB_STEP_SUMMARY"

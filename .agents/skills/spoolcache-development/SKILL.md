@@ -279,7 +279,7 @@ After the feature receipt passes, run DeepSeek/Qwen/GLM only as the separate
 compatibility matrix required by the change. Do not maintain per-feature model
 choices.
 
-For local TP=1/PP=1 functional development, use the repository `Dockerfile`
+For local TP=1/PP=1 functional development, use the repository `Dockerfile.development`
 and `compose.yaml`. They pin the official multi-architecture
 `vllm/vllm-openai` image and the project Gemma revision; do not install a second
 vLLM/Torch/CUDA stack into the host `.venv`. Confirm no other model service is
