@@ -14,7 +14,7 @@ from typing import Any
 
 from .errors import LayoutError
 from .identity import sha256_json
-from .manifest import RankManifest
+from .manifest import TokenSnapshot
 
 # This is an internal persisted protocol identity, not an operator-selectable
 # profile or model compatibility gate. Every deployment uses runtime discovery.
@@ -315,36 +315,34 @@ class HMALayout:
             for group, table in zip(self.groups, block_tables, strict=True)
         )
 
-    def validate_manifest_coverage(self, manifest: RankManifest) -> None:
+    def validate_manifest_coverage(self, manifest: TokenSnapshot) -> None:
         """Prove that a manifest covers every required opaque page exactly once."""
 
         if manifest.profile != self.profile or manifest.layout_digest != self.digest:
             raise LayoutError("manifest layout identity differs from this worker")
         expected_counts = self.selected_page_counts(manifest.span_tokens)
-        descriptors: dict[tuple[int, str], list[Any]] = {}
-        for descriptor in manifest.objects:
-            key = (descriptor.group_index, descriptor.layer_name)
-            descriptors.setdefault(key, []).append(descriptor)
-        expected_keys = {
-            (group.group_index, layer.name)
-            for group in self.groups
+        # Files arrive in prefix order, with boundary state last. Keep one
+        # cursor per layer instead of retaining every file/layer descriptor.
+        expected = {
+            (group.group_index, layer.name): (count, layer.page_size_bytes)
+            for group, count in zip(self.groups, expected_counts, strict=True)
             for layer in group.layers
         }
-        if set(descriptors) != expected_keys:
+        cursors: dict[tuple[int, str], int] = {}
+        for descriptor in manifest.objects:
+            for segment in descriptor.segments:
+                key = (segment.group_index, segment.layer_name)
+                if key not in expected:
+                    raise LayoutError("manifest does not contain exactly every HMA layer")
+                if segment.page_start != cursors.get(key, 0):
+                    raise LayoutError("manifest HMA page ranges contain a gap")
+                if segment.byte_length != segment.page_count * expected[key][1]:
+                    raise LayoutError("manifest HMA object byte length differs")
+                cursors[key] = segment.page_start + segment.page_count
+        if set(cursors) != set(expected):
             raise LayoutError("manifest does not contain exactly every HMA layer")
-        for group, page_count in zip(self.groups, expected_counts, strict=True):
-            for layer in group.layers:
-                cursor = 0
-                for descriptor in descriptors[(group.group_index, layer.name)]:
-                    if descriptor.page_start != cursor:
-                        raise LayoutError("manifest HMA page ranges contain a gap")
-                    if descriptor.byte_length != (
-                        descriptor.page_count * layer.page_size_bytes
-                    ):
-                        raise LayoutError("manifest HMA object byte length differs")
-                    cursor += descriptor.page_count
-                if cursor != page_count:
-                    raise LayoutError("manifest HMA page coverage is incomplete")
+        if any(cursors[key] != count for key, (count, _) in expected.items()):
+            raise LayoutError("manifest HMA page coverage is incomplete")
 
 
 _MISSING = object()

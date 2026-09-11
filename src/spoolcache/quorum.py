@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Iterable, Mapping
 
 from .errors import ManifestError
+from .config import inventory_capacity, INVENTORY_ENTRY_BYTES
 
 
 _MAX_GENERATION_LENGTH = 128
@@ -63,7 +64,7 @@ class InventoryReporter:
         rank: int,
         generation: str,
         generation_epoch: int,
-        max_entries: int,
+        max_bytes: int,
         max_report_entries: int,
     ) -> None:
         if (
@@ -81,7 +82,7 @@ class InventoryReporter:
         ):
             raise ValueError("worker inventory identity is invalid")
         for label, value in (
-            ("inventory", max_entries),
+            ("inventory", max_bytes),
             ("report", max_report_entries),
         ):
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
@@ -89,10 +90,12 @@ class InventoryReporter:
         self.rank = rank
         self.generation = generation
         self.generation_epoch = generation_epoch
-        self.max_entries = max_entries
+        self.max_bytes = max_bytes
+        inventory_capacity(max_bytes)
         self.max_report_entries = max_report_entries
         self._held: dict[str, int] = {}
         self._observed: dict[str, int] = {}
+        self._dirty = False
         self._sequence = 0
         self._history: collections.deque[InventoryDelta] = collections.deque(maxlen=64)
         self._delta_cursor = 0
@@ -110,23 +113,25 @@ class InventoryReporter:
         # safe false negatives; they are never advertised to the scheduler.
         selected: list[tuple[str, int]] = []
         for item in entries.items():
-            if len(selected) >= self.max_entries:
+            if (len(selected) + 1) * INVENTORY_ENTRY_BYTES > self.max_bytes:
                 break
             selected.append(item)
         _validate_entries(selected)
         self._held = dict(reversed(selected))
+        self._dirty = True
 
     @_reporter_locked
     def add(self, entry_id: str, span_tokens: int) -> None:
         _validate_entries(((entry_id, span_tokens),))
-        self._held.pop(entry_id, None)
-        if len(self._held) >= self.max_entries:
+        previous = self._held.pop(entry_id, None)
+        if (len(self._held) + 1) * INVENTORY_ENTRY_BYTES > self.max_bytes:
             self._held.pop(next(iter(self._held)))
         self._held[entry_id] = span_tokens
+        self._dirty |= previous != span_tokens
 
     @_reporter_locked
     def remove(self, entry_id: str) -> None:
-        self._held.pop(entry_id, None)
+        self._dirty |= self._held.pop(entry_id, None) is not None
 
     @_reporter_locked
     def held_entry_ids(self) -> tuple[str, ...]:
@@ -135,20 +140,13 @@ class InventoryReporter:
         return tuple(self._held)
 
     @_reporter_locked
-    def startup(self, max_entries: int) -> tuple[tuple[str, int], ...]:
-        if (
-            isinstance(max_entries, bool)
-            or not isinstance(max_entries, int)
-            or max_entries <= 0
-        ):
-            raise ValueError("startup inventory bound must be positive")
-        inventory = tuple(sorted(self._held.items()))[:max_entries]
-        # The scheduler receives this image out of band before periodic stats.
-        # The rest of the bounded local catalog is a safe false negative until
-        # its rolling checkpoint arrives; it must not be represented as a huge
-        # delta that needlessly withdraws an otherwise synchronized rank.
+    def startup(self) -> tuple[tuple[str, int], ...]:
+        # The catalog is already memory-bounded. Never slice this handshake:
+        # dropping one intermediate key can make a complete long prefix miss.
+        inventory = tuple(sorted(self._held.items()))
         self._observed = dict(self._held)
-        self._checkpoint_items = tuple(sorted(self._held.items()))
+        self._dirty = False
+        self._checkpoint_items = inventory
         self._checkpoint_sequence = self._sequence
         return inventory
 
@@ -161,11 +159,21 @@ class InventoryReporter:
             or batch_size > self.max_report_entries
         ):
             raise ValueError("inventory batch size exceeds its fixed bound")
-        if self._held != self._observed:
-            added = tuple(sorted(self._held.items() - self._observed.items()))
-            removed = tuple(sorted(self._observed.keys() - self._held.keys()))
+        if self._dirty and self._held != self._observed:
+            # Withdraw every obsolete advertised value immediately. New keys
+            # can wait in the bounded held catalog: their absence is a safe
+            # false negative, and must not withdraw unrelated existing hits.
+            # A changed span is removed now and re-added on a later report.
+            removed = tuple(sorted(
+                key for key, span in self._observed.items()
+                if self._held.get(key) != span
+            ))
             base = self._sequence
-            if len(added) + len(removed) <= batch_size:
+            if len(removed) <= batch_size:
+                added = tuple(sorted(
+                    (key, span) for key, span in self._held.items()
+                    if key not in self._observed
+                )[:batch_size - len(removed)])
                 self._sequence += 1
                 delta = InventoryDelta(
                     sequence=self._sequence,
@@ -173,11 +181,13 @@ class InventoryReporter:
                     added=added,
                     removed=removed,
                 )
+                for key in removed:
+                    self._observed.pop(key)
+                self._observed.update(added)
             else:
-                # A change too large for one bounded delta is represented by a
-                # deliberate sequence gap. The scheduler withdraws this rank
-                # immediately and only a complete rolling checkpoint can
-                # re-admit it; no stale entry can be advertised as a hit.
+                # Too many removals cannot wait while stale entries remain
+                # admitted. A deliberate gap withdraws the entire rank until
+                # a complete rolling checkpoint proves its replacement.
                 self._sequence += 2
                 delta = InventoryDelta(
                     sequence=self._sequence,
@@ -187,6 +197,7 @@ class InventoryReporter:
                 )
                 self._history.clear()
                 self._delta_cursor = 0
+                self._observed = dict(self._held)
             self._history.append(delta)
             # The report which first observes a mutation must carry that
             # newest delta. Replaying an older retained delta here could leave
@@ -195,11 +206,17 @@ class InventoryReporter:
             # if one was actually lost, the sequence gap safely withdraws the
             # rank until its rolling checkpoint completes.
             self._delta_cursor = len(self._history) - 1
-            self._observed = dict(self._held)
-            self._checkpoint_items = tuple(sorted(self._held.items()))
+            # A checkpoint represents exactly the emitted sequence. Pending
+            # additions enter it only after their own bounded delta is sent.
+            self._checkpoint_items = tuple(sorted(self._observed.items()))
             self._checkpoint_sequence = self._sequence
             self._checkpoint_cycle += 1
             self._checkpoint_index = 0
+
+        # After removals, observed is an identical-value subset of held.
+        # Keep draining queued additions without scanning unchanged inventory
+        # on every idle report. Cancelled mutations need no new sequence.
+        self._dirty = len(self._held) != len(self._observed)
 
         count = max(
             1,
@@ -250,7 +267,7 @@ class QuorumCatalog:
         self,
         *,
         expected_ranks: Iterable[int],
-        max_entries: int,
+        max_bytes: int,
         max_report_entries: int,
     ) -> None:
         materialized_ranks = tuple(
@@ -267,11 +284,11 @@ class QuorumCatalog:
             raise ValueError("expected ranks are invalid")
         ranks = frozenset(materialized_ranks)
         if (
-            isinstance(max_entries, bool)
-            or not isinstance(max_entries, int)
-            or max_entries <= 0
+            isinstance(max_bytes, bool)
+            or not isinstance(max_bytes, int)
+            or max_bytes <= 0
         ):
-            raise ValueError("catalog max_entries must be positive")
+            raise ValueError("catalog max_bytes must be positive")
         if (
             isinstance(max_report_entries, bool)
             or not isinstance(max_report_entries, int)
@@ -279,7 +296,8 @@ class QuorumCatalog:
         ):
             raise ValueError("catalog report bound must be positive")
         self.expected_ranks = ranks
-        self.max_entries = max_entries
+        self.max_bytes = max_bytes
+        inventory_capacity(max_bytes)
         self.max_report_entries = max_report_entries
         self._generation: dict[int, tuple[str, int]] = {}
         self._generation_history: dict[
@@ -299,8 +317,10 @@ class QuorumCatalog:
         self._generation_conflicts: set[int] = set()
         self._recency: collections.OrderedDict[str, None] = collections.OrderedDict()
         self._generation_changes_total = 0
+        self._quorum_count: int | None = None
 
     def _withdraw_rank(self, rank: int) -> None:
+        self._quorum_count = None
         for entry_id in tuple(self._rank_entries[rank]):
             ranks = self._entry_ranks.get(entry_id)
             if ranks is not None:
@@ -325,7 +345,8 @@ class QuorumCatalog:
         self._recency[entry_id] = None
 
     def _enforce_bound(self) -> None:
-        while len(self._entry_ranks) > self.max_entries and self._recency:
+        while len(self._entry_ranks) * INVENTORY_ENTRY_BYTES > self.max_bytes and self._recency:
+            self._quorum_count = None
             entry_id, _ = self._recency.popitem(last=False)
             ranks = self._entry_ranks.pop(entry_id, set())
             for rank in ranks:
@@ -435,9 +456,9 @@ class QuorumCatalog:
         if disposition == "current":
             return
         self._adopt_generation(rank, generation, generation_epoch)
-        items = tuple(itertools.islice(entries, self.max_entries + 1))
+        items = tuple(itertools.islice(entries, inventory_capacity(self.max_bytes) + 1))
         _validate_entries(items)
-        if len(items) > self.max_entries:
+        if len(items) * INVENTORY_ENTRY_BYTES > self.max_bytes:
             raise ManifestError("startup inventory exceeds the catalog bound")
         materialized = dict(items)
         if len(materialized) != len(items):
@@ -483,7 +504,7 @@ class QuorumCatalog:
         try:
             validate_inventory_report(
                 report,
-                max_entries=self.max_entries,
+                max_bytes=self.max_bytes,
                 max_report_entries=self.max_report_entries,
             )
         except ManifestError:
@@ -591,7 +612,11 @@ class QuorumCatalog:
 
     @property
     def quorum_count(self) -> int:
-        return sum(self.has_quorum(entry_id) for entry_id in self._entry_ranks)
+        if self._quorum_count is None:
+            self._quorum_count = sum(
+                self.has_quorum(entry_id) for entry_id in self._entry_ranks
+            )
+        return self._quorum_count
 
     @property
     def desynchronized_ranks(self) -> frozenset[int]:
@@ -637,11 +662,11 @@ def _validate_entries(entries: Iterable[tuple[str, int]]) -> None:
 def validate_inventory_report(
     report: WorkerInventoryReport,
     *,
-    max_entries: int,
+    max_bytes: int,
     max_report_entries: int,
 ) -> None:
     for label, value in (
-        ("inventory", max_entries),
+        ("inventory", max_bytes),
         ("report", max_report_entries),
     ):
         if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
@@ -687,7 +712,7 @@ def validate_inventory_report(
         or checkpoint.count <= 0
         or checkpoint.count > max(1, checkpoint.held_count)
         or not 0 <= checkpoint.index < checkpoint.count
-        or not 0 <= checkpoint.held_count <= max_entries
+        or not 0 <= checkpoint.held_count <= inventory_capacity(max_bytes)
         or len(checkpoint.entries) > max_report_entries
         or len(checkpoint.entries) > checkpoint.held_count
     ):

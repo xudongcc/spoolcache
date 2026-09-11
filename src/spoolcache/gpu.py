@@ -9,17 +9,18 @@ from __future__ import annotations
 
 import contextlib
 import math
-import queue
 import threading
+import queue
 from dataclasses import dataclass
-from typing import Any, Iterator, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence
 
+from .buffers import AlignedBuffer
 from .errors import FatalRestoreError, LayoutError, StoreBusyError
 from .hma import HMALayout
 from .identity import sha256_json
-from .manifest import ObjectDescriptor, RankManifest
-from .store import ManifestStore, ObjectSource
-
+from .manifest import PageSlice, TokenSnapshot, TokenFileDescriptor
+if TYPE_CHECKING:
+    from .token_files import TokenFileStore
 
 @dataclass
 class _PinnedSlot:
@@ -28,8 +29,51 @@ class _PinnedSlot:
     tensor: Any
     completion_event: Any
     pending: bool = False
+    mapping: Any = None
+    runtime: Any = None
+    record_failed: bool = False
+
+    @classmethod
+    def allocate(cls, index, size, torch, runtime):
+        slot = cls(index, size, None, None,
+                   mapping=AlignedBuffer.allocate(index, size), runtime=runtime)
+        registered = False
+        try:
+            slot.tensor = torch.frombuffer(slot.mapping.view, dtype=torch.uint8)
+            result = runtime.cudaHostRegister(slot.tensor.data_ptr(), size, 0)
+            if int(result) != 0:
+                raise RuntimeError(f"CUDA host registration failed: {result}")
+            registered = True
+            slot.completion_event = torch.cuda.Event(blocking=False, interprocess=False)
+            if not slot.tensor.is_pinned():
+                raise LayoutError("registered staging memory is not CUDA pinned")
+            return slot
+        except BaseException:
+            if registered:
+                slot.close()
+            else:
+                slot.tensor = None
+                slot.mapping.close()
+            raise
+
+    @property
+    def view(self):
+        return self.mapping.view
+
+    def close(self):
+        if self.mapping is None:
+            return
+        self.wait_until_reusable()
+        result = self.runtime.cudaHostUnregister(self.tensor.data_ptr())
+        if int(result) != 0:
+            raise RuntimeError(f"CUDA host unregister failed: {result}")
+        self.tensor = None
+        self.mapping.close()
+        self.mapping = None
 
     def wait_until_reusable(self) -> None:
+        if self.record_failed:
+            raise RuntimeError("CUDA staging event recording failed; terminal drain required")
         if self.pending:
             self.completion_event.synchronize()
             self.pending = False
@@ -37,16 +81,17 @@ class _PinnedSlot:
     def record_use(self, stream: Any) -> None:
         if self.pending:
             raise RuntimeError("pinned staging slot is still owned by CUDA")
-        self.completion_event.record(stream)
         self.pending = True
+        self.record_failed = True
+        self.completion_event.record(stream)
+        self.record_failed = False
 
 
 class PinnedTensorPool:
-    """One fixed allocation of Torch pinned host tensors.
+    """Fixed page-aligned mappings registered with CUDA, without a CPU copy.
 
-    CUDA requires these tensors to be pinned. O_DIRECT alignment belongs to
-    the separate I/O pool; Torch's pinned allocator does not guarantee the
-    page alignment required by the payload storage path.
+    Ordinary file reads fill these credits directly. A terminal CUDA event
+    guards every disk/CPU reuse and unregister.
     """
 
     def __init__(self, *, slot_bytes: int, slot_count: int) -> None:
@@ -57,27 +102,20 @@ class PinnedTensorPool:
         torch = _torch()
         self.slot_bytes = slot_bytes
         self.slot_count = slot_count
-        self._slots = tuple(
-            _PinnedSlot(
-                index=index,
-                size=slot_bytes,
-                tensor=torch.empty(
-                    slot_bytes,
-                    dtype=torch.uint8,
-                    device="cpu",
-                    pin_memory=True,
-                ),
-                completion_event=torch.cuda.Event(
-                    blocking=False,
-                    interprocess=False,
-                ),
-            )
-            for index in range(slot_count)
-        )
+        slots = []
+        runtime = torch.cuda.cudart()
+        try:
+            for index in range(slot_count):
+                slots.append(_PinnedSlot.allocate(index, slot_bytes, torch, runtime))
+        except BaseException:
+            for slot in reversed(slots):
+                slot.close()
+            raise
+        self._slots = tuple(slots)
         # FIFO reuse alternates slots.  While CUDA consumes slot N, the CPU can
         # fill slot N+1 from NVMe; a LIFO queue would immediately reacquire the
         # just-released slot and serialize the two stages.
-        self._available: queue.Queue[_PinnedSlot] = queue.Queue(slot_count)
+        self._available = queue.Queue(slot_count)
         for slot in self._slots:
             self._available.put_nowait(slot)
         self._lock = threading.Lock()
@@ -131,6 +169,7 @@ class PinnedTensorPool:
                 raise RuntimeError("cannot clear events while a slot is borrowed")
             for slot in self._slots:
                 slot.pending = False
+                slot.record_failed = False
 
     def close(self) -> None:
         with self._lock:
@@ -138,8 +177,10 @@ class PinnedTensorPool:
                 raise RuntimeError("cannot close a pool with borrowed pinned tensors")
             if self._closed:
                 return
+            for slot in self._slots:
+                slot.close()
+            self._slots = ()
             self._closed = True
-        self._slots = ()
 
 
 def bind_group_owned_kv_caches(
@@ -227,6 +268,37 @@ class BoundPageLayer:
     pages: Any
 
 
+def _contiguous_page_span(pages, physical_pages):
+    """Borrow a proven dense GPU span while request blocks remain owned.
+
+    A continuous page-id range over dense byte pages needs no index tensor or
+    temporary GPU gather/scatter. Other layouts keep opaque indexed copies.
+    The caller's CUDA completion still guards source/destination ownership.
+    """
+    if not physical_pages or not pages.is_contiguous():
+        return None
+    first = physical_pages[0]
+    if first < 0 or any(value != first + index for index, value in enumerate(physical_pages)):
+        return None
+    return pages.narrow(0, first, len(physical_pages)).view(-1)
+
+
+def _segment_byte_ranges(segments, start, length):
+    """Intersect a file byte range with its ordered complete-page metadata."""
+    if start < 0 or length <= 0 or start + length > sum(s.byte_length for s in segments):
+        raise LayoutError("file byte range differs from page coverage")
+    for segment in segments:
+        if start >= segment.byte_length:
+            start -= segment.byte_length
+            continue
+        size = min(length, segment.byte_length - start)
+        yield segment, start, size
+        length -= size
+        if not length:
+            return
+        start = 0
+
+
 class TorchPageMover:
     """Capture and restore strict HMA layouts with bounded staging memory."""
 
@@ -249,15 +321,6 @@ class TorchPageMover:
             raise LayoutError(
                 "registered KV layers differ from the discovered HMA layout: "
                 f"missing={missing}, extra={extra}"
-            )
-        largest_page = max(
-            layer.page_size_bytes
-            for group in layout.groups
-            for layer in group.layers
-        )
-        if slot_bytes < largest_page:
-            raise LayoutError(
-                f"staging slot {slot_bytes} is smaller than page {largest_page}"
             )
         bound: dict[tuple[int, str], BoundPageLayer] = {}
         geometry: list[dict[str, object]] = []
@@ -335,116 +398,145 @@ class TorchPageMover:
     def pinned_budget_bytes(self) -> int:
         return self._pool.budget_bytes
 
-    def capture_sources(
-        self,
-        block_tables: Sequence[Sequence[int]],
-        span_tokens: int,
-    ) -> Iterator[ObjectSource]:
-        """Yield bounded object sources in manifest order.
 
-        ``ManifestStore.commit`` consumes each source before requesting the
-        next one, so a slot remains borrowed only through one object write.
-        """
+    def _copy_page_bytes(self, layer, physical_pages, byte_start, host, *, to_device,
+                         index_cache=None):
+        """Copy a bounded byte range, including partial or oversized GPU pages."""
+        page_bytes = layer.page_size_bytes
+        first, offset = divmod(byte_start, page_bytes)
+        count = (offset + host.numel() + page_bytes - 1) // page_bytes
+        pages = physical_pages[first : first + count]
+        if len(pages) != count:
+            raise LayoutError("transfer page range is incomplete")
+        dense = _contiguous_page_span(layer.pages, pages)
+        if dense is not None:
+            target = dense[offset : offset + host.numel()]
+            if to_device:
+                target.copy_(host, non_blocking=True)
+            else:
+                host.copy_(target, non_blocking=True)
+            return
 
-        self._ensure_open()
-        selected = self.layout.select_physical_pages(block_tables, span_tokens)
-        for group, physical_pages in zip(
-            self.layout.groups, selected, strict=True
-        ):
-            for layer in group.layers:
-                pages_per_object = self._pool.slot_bytes // layer.page_size_bytes
-                for page_start in range(0, len(physical_pages), pages_per_object):
-                    page_ids = physical_pages[
-                        page_start : page_start + pages_per_object
-                    ]
-                    yield ObjectSource(
-                        group_index=group.group_index,
-                        layer_name=layer.name,
-                        page_start=page_start,
-                        page_count=len(page_ids),
-                        chunks=self._capture_chunks(
-                            self._bound[(group.group_index, layer.name)],
-                            page_ids,
-                        ),
-                    )
+        # Partial head/tail pages are direct views. Only complete intervening
+        # pages need indexed gather/scatter, bounded by this one host credit.
+        cursor, page_index = 0, 0
+        if offset:
+            length = min(page_bytes - offset, host.numel())
+            target = layer.pages[pages[0]].view(-1)[offset : offset + length]
+            if to_device:
+                target.copy_(host[:length], non_blocking=True)
+            else:
+                host[:length].copy_(target, non_blocking=True)
+            cursor, page_index = length, 1
+        whole = (host.numel() - cursor) // page_bytes
+        if whole:
+            ids = pages[page_index : page_index + whole]
+            cache_key = (ids, layer.pages.device)
+            if index_cache is not None and index_cache[0] == cache_key:
+                indexes = index_cache[1]
+            else:
+                indexes = self._torch.tensor(ids, dtype=self._torch.long,
+                                             device=layer.pages.device)
+                if index_cache is not None:
+                    index_cache[:] = [cache_key, indexes]
+            length = whole * page_bytes
+            piece = host[cursor : cursor + length]
+            if to_device:
+                staged = piece.to(device=layer.pages.device, non_blocking=True)
+                layer.pages.index_copy_(0, indexes, staged.view(whole, 1, page_bytes))
+            else:
+                gathered = self._torch.index_select(layer.pages, 0, indexes).view(-1)
+                piece.copy_(gathered, non_blocking=True)
+            cursor += length
+            page_index += whole
+        if cursor < host.numel():
+            target = layer.pages[pages[page_index]].view(-1)[:host.numel() - cursor]
+            if to_device:
+                target.copy_(host[cursor:], non_blocking=True)
+            else:
+                host[cursor:].copy_(target, non_blocking=True)
 
-    def _capture_chunks(
-        self,
-        layer: BoundPageLayer,
-        physical_pages: Sequence[int],
-    ) -> Iterator[memoryview]:
-        torch = self._torch
-        payload_bytes = len(physical_pages) * layer.page_size_bytes
+    def _capture_packed(self, segments, selected, *, byte_start=0, byte_length=None):
+        """Borrow one pinned credit for a bounded range of one or more files."""
+        total = sum(segment.byte_length for segment in segments)
+        length = total - byte_start if byte_length is None else byte_length
+        if not 0 < length <= self._pool.slot_bytes:
+            raise LayoutError("capture range exceeds the fixed staging credit")
         with self._pool.acquire(block=True) as slot:
-            indexes = torch.tensor(
-                physical_pages,
-                dtype=torch.long,
-                device=layer.pages.device,
-            )
-            gathered = torch.index_select(layer.pages, 0, indexes).contiguous()
-            flattened = gathered.view(-1)
-            if flattened.numel() != payload_bytes:
-                raise LayoutError("captured HMA payload has an unexpected size")
-            slot.tensor[:payload_bytes].copy_(flattened, non_blocking=False)
-            array = slot.tensor[:payload_bytes].numpy()
-            view = memoryview(array).cast("B")
+            cursor = 0
+            stream = self._torch.cuda.current_stream(self.device_index)
+            submitted = False
+            index_cache = [None, None]
+            try:
+                for segment, offset, size in _segment_byte_ranges(segments, byte_start, length):
+                    layer = self._bound[(segment.group_index, segment.layer_name)]
+                    pages = selected[segment.group_index][
+                        segment.page_start : segment.page_start + segment.page_count
+                    ]
+                    submitted = True
+                    self._copy_page_bytes(
+                        layer, pages, offset, slot.tensor[cursor : cursor + size],
+                        to_device=False, index_cache=index_cache,
+                    )
+                    cursor += size
+            finally:
+                # No producer bytes or credit may escape before D2H completes,
+                # including a failure after a previous fragment was submitted.
+                if submitted:
+                    slot.record_use(stream)
+                    slot.wait_until_reusable()
+            view = memoryview(slot.tensor[:cursor].numpy()).cast("B")
             try:
                 yield view
             finally:
                 view.release()
 
-    def commit(
-        self,
-        store: ManifestStore,
-        *,
-        entry_id: str,
-        deployment_identity_digest: str,
-        rank_identity_digest: str,
-        span_tokens: int,
-        physical_rank: int,
-        topology_digest: str,
-        block_tables: Sequence[Sequence[int]],
-        created_at_unix_ns: int | None = None,
-    ) -> RankManifest:
-        manifest = store.commit(
-            entry_id=entry_id,
-            deployment_identity_digest=deployment_identity_digest,
-            rank_identity_digest=rank_identity_digest,
-            span_tokens=span_tokens,
-            physical_rank=physical_rank,
-            topology_digest=topology_digest,
-            profile=self.layout.profile,
-            layout_digest=self.layout.digest,
-            sources=self.capture_sources(block_tables, span_tokens),
-            created_at_unix_ns=created_at_unix_ns,
-        )
-        self.layout.validate_manifest_coverage(manifest)
-        return manifest
-
     def restore_entry(
         self,
-        store: ManifestStore,
+        store: TokenFileStore,
         *,
         entry_id: str,
         span_tokens: int,
         block_tables: Sequence[Sequence[int]],
         expected_manifest_digest: str | None = None,
-    ) -> RankManifest:
+    ) -> TokenSnapshot:
+        # Pin every object before releasing the namespace lock. The view stays
+        # live through the final CUDA drain, while unrelated GC may progress.
+        try:
+            with store.restore_view(entry_id) as view:
+                return self._restore_entry_view(
+                    store, view=view, span_tokens=span_tokens,
+                    block_tables=block_tables,
+                    expected_manifest_digest=expected_manifest_digest)
+        except FatalRestoreError:
+            raise
+        except Exception as error:
+            raise FatalRestoreError("SPOOLCACHE_POST_ADMISSION_RESTORE_FAILED") from error
+
+    def _restore_entry_view(
+        self,
+        store: TokenFileStore,
+        *,
+        view: Any,
+        span_tokens: int,
+        block_tables: Sequence[Sequence[int]],
+        expected_manifest_digest: str | None = None,
+    ) -> TokenSnapshot:
         """Restore one authenticated object at a time with a single disk pass.
 
         The manifest and every object's immutable metadata are checked before
-        placement starts.  ``_restore_object`` then reads each payload exactly
-        once into request-owned staging, authenticates it, and only then places
-        that object.  A failure after an earlier object was placed is fatal by
+        placement starts. A bounded batch reuses pinned staging; each payload
+        is authenticated before GPU placement.
+        A failure after an earlier object was placed is fatal by
         contract, so the engine cannot continue with a partial transaction.
         """
 
         self._ensure_open()
         try:
-            # Do not pre-read payloads here.  _restore_object authenticates the
+            # Do not pre-read payloads here. The streaming receiver authenticates the
             # same bytes it transfers, avoiding a full verify pass followed by
             # a second full transfer pass.
-            result = store.lookup(entry_id, verify_payloads=False)
+            result = view.result
             if not result.is_hit or result.manifest is None:
                 raise FatalRestoreError(
                     f"SPOOLCACHE_POST_ADMISSION_LOOKUP_FAILED:{result.reason}"
@@ -461,15 +553,15 @@ class TorchPageMover:
             stream = self._torch.cuda.current_stream(self.device_index)
             submitted = False
             try:
-                for descriptor in result.manifest.objects:
-                    targets = selected[descriptor.group_index][
-                        descriptor.page_start : descriptor.page_start
-                        + descriptor.page_count
-                    ]
-                    if len(targets) != descriptor.page_count:
-                        raise LayoutError("restore target page range is incomplete")
-                    self._restore_object(store, descriptor, targets, stream=stream)
-                    submitted = True
+                # A receiver can enqueue some layers before a later failure.
+                # Always drain the whole attempt, including failed receivers.
+                submitted = True
+                store.stream_objects(
+                    result.manifest.objects,
+                    lambda descriptor: self._restore_object_receiver(
+                        descriptor, selected, stream=stream), lease=view,
+                    buffer_pool=self._pool,
+                    on_batch_complete=lambda slot: slot.record_use(stream))
             finally:
                 if submitted:
                     self._synchronize_restore_stream(stream)
@@ -481,55 +573,46 @@ class TorchPageMover:
                 "SPOOLCACHE_POST_ADMISSION_RESTORE_FAILED"
             ) from error
 
-    def _restore_object(
+    @contextlib.contextmanager
+    def _restore_object_receiver(
         self,
-        store: ManifestStore,
-        descriptor: ObjectDescriptor,
-        physical_pages: Sequence[int],
+        descriptor: TokenFileDescriptor,
+        selected: Sequence[Sequence[int]],
         *,
         stream: Any,
-    ) -> None:
-        layer = self._bound[(descriptor.group_index, descriptor.layer_name)]
+    ):
         payload_bytes = descriptor.byte_length
-        if payload_bytes > self._pool.slot_bytes:
-            raise LayoutError("manifest object exceeds the fixed staging slot")
-        with self._pool.acquire(block=True) as slot:
-            array = slot.tensor[:payload_bytes].numpy()
-            destination = memoryview(array).cast("B")
+        received = 0
+        index_cache = [None, None]
+
+        def receive(chunk: memoryview) -> None:
+            nonlocal received
+            if not 0 < len(chunk) <= min(self._pool.slot_bytes, payload_bytes - received):
+                raise LayoutError("token restore range differs from authenticated object")
+            source = self._torch.frombuffer(chunk, dtype=self._torch.uint8)
+            if not source.is_pinned():
+                raise LayoutError("token restore source is not CUDA pinned")
             cursor = 0
+            for segment, offset, size in _segment_byte_ranges(
+                descriptor.segments, received, len(chunk)
+            ):
+                layer = self._bound[(segment.group_index, segment.layer_name)]
+                pages = selected[segment.group_index][
+                    segment.page_start : segment.page_start + segment.page_count
+                ]
+                self._copy_page_bytes(
+                    layer, pages, offset, source[cursor : cursor + size],
+                    to_device=True, index_cache=index_cache,
+                )
+                cursor += size
+            received += len(chunk)
 
-            def receive(chunk: memoryview) -> None:
-                nonlocal cursor
-                end = cursor + len(chunk)
-                if end > payload_bytes:
-                    raise LayoutError("object stream exceeds its manifest length")
-                destination[cursor:end] = chunk
-                cursor = end
-
-            try:
-                store.stream_object(descriptor, receive)
-                if cursor != payload_bytes:
-                    raise LayoutError("object stream is shorter than its manifest")
-            finally:
-                destination.release()
-            torch = self._torch
-            indexes = torch.tensor(
-                physical_pages,
-                dtype=torch.long,
-                device=layer.pages.device,
-            )
-            staged = slot.tensor[:payload_bytes].to(
-                device=layer.pages.device,
-                non_blocking=True,
-            )
-            staged = staged.view(
-                descriptor.page_count,
-                *tuple(int(size) for size in layer.pages.shape[1:]),
-            )
-            layer.pages.index_copy_(0, indexes, staged)
-            # Keep the pinned source immutable until this stream reaches the
-            # event.  FIFO pool reuse gives the other slot to the CPU first.
-            slot.record_use(stream)
+        # Each range has its own authenticated checksum in the immutable header.
+        # The store marks the containing credit used before returning it; final
+        # whole-file authentication and the outer CUDA drain precede completion.
+        yield receive
+        if received != payload_bytes:
+            raise LayoutError("token restore received an incomplete object")
 
     def _synchronize_restore_stream(self, stream: Any) -> None:
         """One terminal barrier for every object submitted by one restore."""

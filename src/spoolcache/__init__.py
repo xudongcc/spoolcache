@@ -6,7 +6,7 @@ from .hma import (
     build_hma_layout,
 )
 from .identity import DeploymentIdentity, RankIdentity
-from .manifest import ObjectDescriptor, RankManifest
+from .manifest import PageSlice, TokenFileDescriptor, TokenSnapshot
 from .prefix import (
     MultimodalFeatureIdentity,
     PrefixDigest,
@@ -14,17 +14,18 @@ from .prefix import (
     prefix_digests,
     validate_multimodal_features,
 )
-from .store import ManifestStore
+from .token_files import TokenFileStore
 
 __all__ = [
     "DeploymentIdentity",
     "HMALayout",
-    "ManifestStore",
-    "ObjectDescriptor",
+    "TokenFileStore",
+    "TokenFileDescriptor",
+    "PageSlice",
     "PrefixDigest",
     "MultimodalFeatureIdentity",
     "RankIdentity",
-    "RankManifest",
+    "TokenSnapshot",
     "SpoolCacheConfig",
     "aligned_prefix_span",
     "build_hma_layout",

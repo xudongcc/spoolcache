@@ -34,27 +34,24 @@ from vllm.distributed.kv_transfer.kv_connector.v1.metrics import KVConnectorStat
 from ..admission import admit_store_plans
 from .. import __version__ as SPOOLCACHE_VERSION
 from ..config import (
-    CACHE_CHUNK_TOKENS,
-    CATALOG_MAX_ENTRIES,
+    INVENTORY_MEMORY_BYTES,
+    inventory_capacity,
     MAX_PENDING_RESTORES,
     MAX_PENDING_STORES,
-    MAX_SPAN_TOKENS,
-    MIN_SPAN_TOKENS,
     REPORT_BATCH_SIZE,
     STAGING_SLOT_BYTES,
     STAGING_SLOT_COUNT,
-    STARTUP_MAX_DIGESTS,
     SpoolCacheConfig,
+    aligned_chunk_tokens,
 )
 from ..errors import (
     FatalRestoreError,
     IdentityError,
-    StoreBusyError,
     UnsupportedRuntimeError,
 )
 from ..event_journal import PersistentEventJournal
 from ..fail_stop import terminate_worker_after_fatal_restore
-from ..gpu import TorchPageMover, bind_group_owned_kv_caches
+from ..gpu import bind_group_owned_kv_caches
 from ..hma import HMALayout, build_hma_layout
 from ..identity import (
     DeploymentIdentity,
@@ -62,9 +59,13 @@ from ..identity import (
     model_namespace_sha256,
     sha256_json,
 )
-from ..maintenance import DeepScrubber, ScheduledDeepScrubber
+from ..maintenance import ScheduledDeepScrubber
+from ..token_scrub import TokenFileScrubber
+from ..token_mover import TokenPageMover
+from ..token_files import TOKEN_FILE_SCHEMA, TokenFileStore, boundary_state_key, has_boundary_state
 from ..prefix import (
     MultimodalFeatureIdentity,
+    PrefixDigest,
     aligned_prefix_span,
     prefix_digests,
     validate_multimodal_features,
@@ -76,7 +77,7 @@ from ..quorum import (
     WorkerInventoryReport,
     validate_inventory_report,
 )
-from ..store import ManifestOffer, ManifestStore
+from ..rank_store import ManifestOffer
 from ..telemetry import (
     TelemetryBuffer,
     empty_metric_payload,
@@ -111,8 +112,8 @@ _DISK_METRIC_INTERVAL_SECONDS = 300.0
 def _finish_deferred_scrub_shutdown(
     scheduler: ScheduledDeepScrubber,
     journal: PersistentEventJournal | None,
-    mover: TorchPageMover | None,
-    store: ManifestStore | None,
+    mover: TokenPageMover | None,
+    store: TokenFileStore | None,
 ) -> None:
     """Release data-path resources only after a timed-out scrub actually exits.
 
@@ -152,6 +153,7 @@ class SpoolCachePlan:
     entry_id: str
     span_tokens: int
     block_ids_by_group: tuple[tuple[int, ...], ...]
+    prefixes: tuple[PrefixDigest, ...] = ()
 
 
 @dataclass
@@ -194,7 +196,7 @@ class SpoolCacheStats(KVConnectorStats):
         for report in self.reports:
             validate_inventory_report(
                 report,
-                max_entries=CATALOG_MAX_ENTRIES,
+                max_bytes=INVENTORY_MEMORY_BYTES,
                 max_report_entries=REPORT_BATCH_SIZE,
             )
             if report.rank in ranks:
@@ -249,6 +251,74 @@ class _StoreProgress:
 
 class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
     """Exact-prefix, all-HMA-group, rank-local persistent cache."""
+
+    _storage_schema = TOKEN_FILE_SCHEMA
+    @property
+    def _chunk_tokens(self) -> int:
+        return aligned_chunk_tokens(self.layout.alignment_tokens)
+
+    @property
+    def _minimum_span(self) -> int:
+        return self._chunk_tokens
+
+    def _create_mover(self, *args, **kwargs):
+        return TokenPageMover(*args, **kwargs)
+
+    def _create_store(self, *args, **kwargs):
+        kwargs["slot_count"] = 1
+        return TokenFileStore(*args, layout=self.layout, **kwargs)
+
+    def _create_scrub_scheduler(self, store: TokenFileStore) -> ScheduledDeepScrubber:
+        return ScheduledDeepScrubber(TokenFileScrubber(store))
+
+    def _lookup_boundaries(self, first: int, ceiling: int) -> range:
+        # A tail key alone is not a snapshot. Every earlier key must have
+        # quorum too, including keys beneath vLLM's local computed span.
+        return range(self._chunk_tokens, ceiling + 1, self._chunk_tokens)
+
+    def _select_prefix(
+        self, candidates: Sequence[PrefixDigest], first: int
+    ) -> tuple[int, str] | None:
+        selected = None
+        for prefix in candidates:
+            if not self._catalog.has_quorum(prefix.digest, prefix.span_tokens):
+                break
+            if (
+                prefix.span_tokens >= first
+                and prefix.span_tokens % self.layout.alignment_tokens == 0
+                and self._has_boundary_quorum(prefix.digest, prefix.span_tokens)
+            ):
+                selected = prefix.span_tokens, prefix.digest
+        return selected
+
+    def _has_boundary_quorum(self, key: str, span: int) -> bool:
+        return not has_boundary_state(self.layout) or (
+            self._catalog is not None
+            and self._catalog.has_quorum(boundary_state_key(key), span)
+        )
+
+    def _cached_plan(self, plan: SpoolCachePlan) -> bool:
+        keys = (*plan.prefixes, PrefixDigest(plan.span_tokens, plan.entry_id))
+        return (
+            self._catalog is not None
+            and self._has_boundary_quorum(plan.entry_id, plan.span_tokens)
+            and all(self._catalog.has_quorum(p.digest, p.span_tokens) for p in keys)
+        )
+
+    def _cached_request(self, tokens, span, salt, media):
+        if self._catalog is None:
+            return False
+        prefixes = prefix_digests(
+            tokens,
+            deployment_digest=self.deployment_identity.digest,
+            cache_salt=salt,
+            multimodal_features=media,
+            chunk_tokens=self._chunk_tokens,
+            boundaries=range(self._chunk_tokens, span + 1, self._chunk_tokens),
+        )
+        return self._has_boundary_quorum(prefixes[-1].digest, span) and all(
+            self._catalog.has_quorum(p.digest, p.span_tokens) for p in prefixes
+        )
 
     def __init__(
         self,
@@ -308,6 +378,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             vllm_config=vllm_config,
             spec_kind_resolver=spec_kind_resolver,
         )
+        TokenPageMover.validate_layout(self.layout, STAGING_SLOT_BYTES)
         logger.warning(
             "spoolcache: HMA runtime layout profile=%s groups=%s "
             "layers=%d alignment=%d "
@@ -351,9 +422,10 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             vllm_config,
             self.layout,
             model_namespace_sha256=self._model_namespace_sha256,
-            chunk_tokens=CACHE_CHUNK_TOKENS,
+            chunk_tokens=self._chunk_tokens,
             vllm_version=self.runtime_receipt.vllm_version,
             vllm_build_sha256=self.runtime_receipt.vllm_build_sha256,
+            storage_schema=self._storage_schema,
         )
         self._topology_digest = sha256_json(
             dict(self.deployment_identity.topology)
@@ -384,9 +456,10 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         self._coordination_digest = sha256_json(
             {
                 "schema": "spoolcache-coordination/v2",
+                "prefix_reuse_schema": self._storage_schema,
                 "profile": self.layout.profile,
                 "model_namespace_sha256": self._model_namespace_sha256,
-                "chunk_tokens": CACHE_CHUNK_TOKENS,
+                "chunk_tokens": self._chunk_tokens,
                 "spoolcache_version": SPOOLCACHE_VERSION,
                 "vllm_version": self.runtime_receipt.vllm_version,
                 "vllm_build_sha256": self.runtime_receipt.vllm_build_sha256,
@@ -399,7 +472,6 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         self._need_load: dict[str, tuple[str, int, int]] = {}
         self._pending_loads: dict[str, SpoolCachePlan] = {}
         self._store_progress: dict[str, _StoreProgress] = {}
-        self._restored_requests: set[str] = set()
         self._request_salts: dict[str, str | None] = {}
         # Remember skip_write and invalid-salt requests until completion so
         # store tracking cannot publish them. Persistent read control is
@@ -407,15 +479,15 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         # Keep only request IDs here so arbitrary client data is never copied
         # into connector metadata or logs.
         self._skip_write_requests: set[str] = set()
-        self._store: ManifestStore | None = None
-        self._mover: TorchPageMover | None = None
+        self._store: TokenFileStore | None = None
+        self._mover: TokenPageMover | None = None
         self._reporter: InventoryReporter | None = None
         self._telemetry: TelemetryBuffer | None = None
         self._event_journal: PersistentEventJournal | None = None
         self._scrub_scheduler: ScheduledDeepScrubber | None = None
+        self._capacity_remaining = 0
         self._inventory_withdrawn_epoch = 0
         self._inventory_marker_cursor: str | None = None
-        self._object_marker_cursor: str | None = None
         self._event_journal_cursor: dict[
             tuple[str, tuple[str, ...]], int
         ] = {}
@@ -432,7 +504,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
                     coordinate.global_rank
                     for coordinate in self._expected_coordinates
                 ),
-                max_entries=CATALOG_MAX_ENTRIES,
+                max_bytes=INVENTORY_MEMORY_BYTES,
                 max_report_entries=REPORT_BATCH_SIZE,
             )
             self._telemetry = TelemetryBuffer(source="scheduler")
@@ -460,7 +532,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         )
         rank = coordinate.global_rank
         layer_names = tuple(sorted(physical_kv_caches))
-        mover = TorchPageMover(
+        mover = self._create_mover(
             self.layout,
             physical_kv_caches,
             slot_bytes=STAGING_SLOT_BYTES,
@@ -483,9 +555,9 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             / self.deployment_identity.digest
             / f"rank-{rank:04d}"
         )
-        store: ManifestStore | None = None
+        store: TokenFileStore | None = None
         try:
-            store = ManifestStore(
+            store = self._create_store(
                 rank_root,
                 slot_bytes=STAGING_SLOT_BYTES,
                 slot_count=STAGING_SLOT_COUNT,
@@ -509,13 +581,12 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
                 )
             )
             telemetry = TelemetryBuffer(source=f"rank:{rank}")
-            # Materialize the complete bounded local catalog. Only the first
-            # STARTUP_MAX_DIGESTS entries cross the synchronous handshake;
-            # rolling checkpoints advertise the remainder after startup.
+            # Send the complete bounded local catalog at startup. Truncating
+            # keys here can break every chain in a large cache until unrelated
+            # inference advances rolling reports, defeating persistent reuse.
             offers = _prepare_worker_catalog(
                 store,
-                max_bytes=self.config.max_bytes,
-                low_watermark_bytes=self.config.low_watermark_bytes,
+                trigger_bytes=self.config.trigger_watermark_bytes,
             )
         except Exception:
             if store is not None:
@@ -533,36 +604,25 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
                 rank=rank,
                 generation=generation,
                 generation_epoch=generation_epoch,
-                max_entries=CATALOG_MAX_ENTRIES,
+                max_bytes=INVENTORY_MEMORY_BYTES,
                 max_report_entries=REPORT_BATCH_SIZE,
             )
             entries = {offer.entry_id: offer.span_tokens for offer in offers}
             with store._exclusive():
                 reporter.replace(entries)
-                pending_withdrawals = store.pending_inventory_withdrawals(
-                    reporter.held_entry_ids()
-                )
                 marker_batch, inventory_marker_cursor = (
                     store.inventory_withdrawal_marker_batch(
                         REPORT_BATCH_SIZE,
+                        withdraw=reporter.remove,
                     )
                 )
-                object_batch, object_marker_cursor = (
-                    store.object_withdrawal_marker_batch(1)
-                )
-                for entry_id in pending_withdrawals:
-                    reporter.remove(entry_id)
-                startup_inventory = reporter.startup(STARTUP_MAX_DIGESTS)
-                store.acknowledge_absent_inventory_withdrawals(
-                    pending_withdrawals
-                )
+                startup_inventory = reporter.startup()
                 store.acknowledge_absent_inventory_withdrawals(marker_batch)
-                store.acknowledge_unreferenced_object_withdrawals(object_batch)
             # A deep scrub removes the durable manifest before this callback
             # returns. InventoryReporter is synchronized because the scrub
             # driver runs independently from vLLM's stats callback.
             store.set_withdraw_hook(reporter.remove)
-            scrub_scheduler = ScheduledDeepScrubber(DeepScrubber(store))
+            scrub_scheduler = self._create_scrub_scheduler(store)
             self._physical_rank = rank
             self._worker_coordinate = coordinate
             self._rank_identity = rank_identity
@@ -575,7 +635,6 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             self._startup_inventory = startup_inventory
             self._scrub_scheduler = scrub_scheduler
             self._inventory_marker_cursor = inventory_marker_cursor
-            self._object_marker_cursor = object_marker_cursor
             scrub_scheduler.start()
         except Exception:
             if scrub_scheduler is not None:
@@ -611,7 +670,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         logger.warning(
             "spoolcache: worker ready rank=%d pp_rank=%d tp_rank=%d "
             "dcp_rank=%d root=%s entries=%d "
-            "pinned_bytes=%d direct_io=True",
+            "pinned_bytes=%d transfer_bytes=%d",
             rank,
             coordinate.pp_rank,
             coordinate.tp_rank,
@@ -619,6 +678,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             rank_root,
             len(entries),
             self._mover.pinned_budget_bytes,
+            self._store._pool.slot_bytes,
         )
         self._refresh_worker_metrics(force_disk=True)
 
@@ -697,67 +757,49 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
 
     def _commit_store_plans(self, plans: Sequence[SpoolCachePlan]) -> None:
         mover, store = self._worker_data_path()
-        assert self._rank_identity is not None
-        assert self._physical_rank is not None
         for plan in plans:
             started = time.perf_counter()
             try:
-                # Keep manifest visibility and reporter admission in one
-                # rank-maintenance critical section. A scrub can therefore
-                # happen either before publication or after reporter.add(),
-                # where its remove callback necessarily wins.
                 with store._exclusive():
-                    manifest = mover.commit(
+                    snapshot = mover.commit_keys(
                         store,
-                        entry_id=plan.entry_id,
-                        deployment_identity_digest=self.deployment_identity.digest,
-                        rank_identity_digest=self._rank_identity.digest,
-                        span_tokens=plan.span_tokens,
-                        physical_rank=self._physical_rank,
-                        topology_digest=self._topology_digest,
+                        prefixes=(
+                            *plan.prefixes,
+                            PrefixDigest(plan.span_tokens, plan.entry_id),
+                        ),
                         block_tables=plan.block_ids_by_group,
                     )
                     if self._reporter is not None:
-                        self._reporter.add(plan.entry_id, plan.span_tokens)
-            except StoreBusyError:
-                if self._telemetry is not None:
-                    self._telemetry.increment(
-                        "spoolcache_store_skipped_total",
-                        labels=("busy",),
-                    )
-                logger.warning(
-                    "spoolcache: store busy rank=%d request=%s entry=%s",
-                    self._physical_rank,
-                    plan.request_id,
-                    plan.entry_id[:12],
-                )
-                continue
+                        for chunk in snapshot.objects:
+                            self._reporter.add(chunk.key, chunk.span_tokens)
             except Exception:
+                # Earlier chunks may already be durable, but no unconfirmed
+                # key is advertised. Marker consumption precedes every report.
                 if self._telemetry is not None:
                     self._telemetry.increment(
-                        "spoolcache_store_skipped_total",
-                        labels=("error",),
+                        "spoolcache_store_skipped_total", labels=("error",)
                     )
                 logger.exception(
-                    "spoolcache: store skipped rank=%d request=%s entry=%s",
+                    "spoolcache: token save skipped rank=%s entry=%s",
                     self._physical_rank,
-                    plan.request_id,
                     plan.entry_id[:12],
                 )
                 continue
-            elapsed = time.perf_counter() - started
             if self._telemetry is not None:
                 self._telemetry.increment(
                     "spoolcache_store_bytes_total",
-                    value=_manifest_logical_bytes(manifest),
+                    value=_manifest_logical_bytes(snapshot),
                 )
-                self._telemetry.observe("spoolcache_store_seconds", elapsed)
+                self._telemetry.observe(
+                    "spoolcache_store_seconds", time.perf_counter() - started
+                )
             logger.warning(
-                "spoolcache: store rank=%d request=%s tokens=%d entry=%s",
+                "spoolcache: token save rank=%s request=%s tokens=%d entry=%s keys=%d",
                 self._physical_rank,
                 plan.request_id,
                 plan.span_tokens,
                 plan.entry_id[:12],
+                len(snapshot.objects),
             )
         self._maintain_capacity()
         self._refresh_worker_metrics(force_disk=True)
@@ -797,9 +839,9 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             return 0, False
         ceiling = self._safe_restore_span(len(tokens))
         first = max(
-            MIN_SPAN_TOKENS,
-            ((num_computed_tokens // CACHE_CHUNK_TOKENS) + 1)
-            * CACHE_CHUNK_TOKENS,
+            self._minimum_span,
+            ((num_computed_tokens // self._chunk_tokens) + 1)
+            * self._chunk_tokens,
         )
         if ceiling < first:
             self._record_lookup("miss", "safe_span")
@@ -808,13 +850,11 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             tokens,
             deployment_digest=self.deployment_identity.digest,
             cache_salt=cache_salt,
-            chunk_tokens=CACHE_CHUNK_TOKENS,
-            boundaries=range(first, ceiling + 1, CACHE_CHUNK_TOKENS),
+            chunk_tokens=self._chunk_tokens,
+            boundaries=self._lookup_boundaries(first, ceiling),
             multimodal_features=multimodal_features,
         )
-        selected = self._catalog.longest(
-            (candidate.span_tokens, candidate.digest) for candidate in candidates
-        )
+        selected = self._select_prefix(candidates, first)
         if selected is None:
             self._record_lookup("miss", "rank_quorum")
             return 0, False
@@ -885,7 +925,6 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             span_tokens=span_tokens,
             block_ids_by_group=block_ids,
         )
-        self._restored_requests.add(request.request_id)
 
     def build_connector_meta(
         self, scheduler_output: "SchedulerOutput"
@@ -897,7 +936,6 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         finished = set(scheduler_output.finished_req_ids or ())
         for request_id in finished:
             self._store_progress.pop(request_id, None)
-            self._restored_requests.discard(request_id)
             self._need_load.pop(request_id, None)
             self._request_salts.pop(request_id, None)
             self._skip_write_requests.discard(request_id)
@@ -941,14 +979,9 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         self, scheduler_output: "SchedulerOutput"
     ) -> list[SpoolCachePlan]:
         result: list[SpoolCachePlan] = []
-        load_ids = {plan.request_id for plan in self._pending_loads.values()}
         for request in scheduler_output.scheduled_new_reqs:
             request_id = request.req_id
-            if (
-                request_id in self._skip_write_requests
-                or request_id in self._restored_requests
-                or request_id in load_ids
-            ):
+            if request_id in self._skip_write_requests:
                 continue
             tokens = _eligible_new_request_tokens(request)
             if tokens is None:
@@ -964,17 +997,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             if target_span_tokens <= 0:
                 continue
             cache_salt = self._request_salts.get(request_id)
-            target_entry_id = _entry_id(
-                tokens,
-                span_tokens=target_span_tokens,
-                deployment_digest=self.deployment_identity.digest,
-                cache_salt=cache_salt or "",
-                chunk_tokens=CACHE_CHUNK_TOKENS,
-                multimodal_features=multimodal_features,
-            )
-            if self._catalog is not None and self._catalog.has_quorum(
-                target_entry_id, target_span_tokens
-            ):
+            if self._cached_request(tokens, target_span_tokens, cache_salt or "", multimodal_features):
                 continue
             block_ids = [list(group) for group in request.block_ids]
             progress = _StoreProgress(
@@ -991,16 +1014,14 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
                 scheduled_tokens=scheduled,
                 target_span_tokens=target_span_tokens,
                 quantum_tokens=self._store_quantum,
-                min_span_tokens=MIN_SPAN_TOKENS,
+                min_span_tokens=self._minimum_span,
                 require_exact_boundary=self._store_requires_exact_boundary,
             )
             if candidate is None:
                 self._store_progress[request_id] = progress
             elif candidate > 0:
                 plan = self._plan_from_progress(request_id, progress, candidate)
-                if self._catalog is None or not self._catalog.has_quorum(
-                    plan.entry_id, plan.span_tokens
-                ):
+                if not self._cached_plan(plan):
                     result.append(plan)
             elif self._telemetry is not None:
                 self._telemetry.increment(
@@ -1038,16 +1059,14 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
                 scheduled_tokens=scheduled,
                 target_span_tokens=progress.target_span_tokens,
                 quantum_tokens=self._store_quantum,
-                min_span_tokens=MIN_SPAN_TOKENS,
+                min_span_tokens=self._minimum_span,
                 require_exact_boundary=self._store_requires_exact_boundary,
             )
             if candidate is not None:
                 self._store_progress.pop(request_id, None)
                 if candidate > 0:
                     plan = self._plan_from_progress(request_id, progress, candidate)
-                    if self._catalog is None or not self._catalog.has_quorum(
-                        plan.entry_id, plan.span_tokens
-                    ):
+                    if not self._cached_plan(plan):
                         result.append(plan)
                 elif self._telemetry is not None:
                     self._telemetry.increment(
@@ -1058,7 +1077,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
 
     @property
     def _store_quantum(self) -> int:
-        return math.lcm(self.layout.alignment_tokens, CACHE_CHUNK_TOKENS)
+        return self._chunk_tokens
 
     @property
     def _store_requires_exact_boundary(self) -> bool:
@@ -1075,25 +1094,20 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         )
 
     def _plan_from_progress(
-        self,
-        request_id: str,
-        progress: _StoreProgress,
-        span_tokens: int,
+        self, request_id: str, progress: _StoreProgress, span_tokens: int
     ) -> SpoolCachePlan:
         block_ids = _normalize_block_ids(progress.block_ids_by_group)
         self.layout.select_physical_pages(block_ids, span_tokens)
+        prefixes = prefix_digests(
+            progress.token_ids,
+            deployment_digest=self.deployment_identity.digest,
+            cache_salt=progress.cache_salt,
+            multimodal_features=progress.multimodal_features,
+            chunk_tokens=self._chunk_tokens,
+            boundaries=range(self._chunk_tokens, span_tokens + 1, self._chunk_tokens),
+        )
         return SpoolCachePlan(
-            request_id=request_id,
-            entry_id=_entry_id(
-                progress.token_ids,
-                span_tokens=span_tokens,
-                deployment_digest=self.deployment_identity.digest,
-                cache_salt=progress.cache_salt,
-                chunk_tokens=CACHE_CHUNK_TOKENS,
-                multimodal_features=progress.multimodal_features,
-            ),
-            span_tokens=span_tokens,
-            block_ids_by_group=block_ids,
+            request_id, prefixes[-1].digest, span_tokens, block_ids, prefixes[:-1]
         )
 
     def request_finished_all_groups(
@@ -1124,31 +1138,16 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             # lock as report construction so no scan/report operation can
             # overwrite the fail-closed image.
             with store._exclusive():
-                pending_withdrawals = store.pending_inventory_withdrawals(
-                    self._reporter.held_entry_ids()
-                )
                 marker_batch, next_inventory_marker_cursor = (
                     store.inventory_withdrawal_marker_batch(
                         REPORT_BATCH_SIZE,
                         after=self._inventory_marker_cursor,
+                        withdraw=self._reporter.remove,
                     )
                 )
-                object_batch, next_object_marker_cursor = (
-                    store.object_withdrawal_marker_batch(
-                        1,
-                        after=self._object_marker_cursor,
-                    )
-                )
-                for entry_id in pending_withdrawals:
-                    self._reporter.remove(entry_id)
                 reports = (self._reporter.next_report(REPORT_BATCH_SIZE),)
-                store.acknowledge_absent_inventory_withdrawals(
-                    pending_withdrawals
-                )
                 store.acknowledge_absent_inventory_withdrawals(marker_batch)
-                store.acknowledge_unreferenced_object_withdrawals(object_batch)
                 self._inventory_marker_cursor = next_inventory_marker_cursor
-                self._object_marker_cursor = next_object_marker_cursor
         elif self._role == KVConnectorRole.SCHEDULER:
             self._refresh_scheduler_metrics()
         data = (
@@ -1297,7 +1296,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
                 raise RuntimeError("SpoolCache startup inventory type is incompatible")
             if (
                 not isinstance(inventory.entries, tuple)
-                or len(inventory.entries) > STARTUP_MAX_DIGESTS
+                or len(inventory.entries) > inventory_capacity(INVENTORY_MEMORY_BYTES)
             ):
                 raise RuntimeError("SpoolCache startup inventory exceeds its bound")
             if (
@@ -1531,7 +1530,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             raise RuntimeError("SpoolCache worker received incompatible metadata")
         return metadata
 
-    def _worker_data_path(self) -> tuple[TorchPageMover, ManifestStore]:
+    def _worker_data_path(self) -> tuple[TokenPageMover, TokenFileStore]:
         if self._mover is None or self._store is None:
             raise RuntimeError("SpoolCache worker data path is not registered")
         return self._mover, self._store
@@ -1540,9 +1539,8 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         return aligned_prefix_span(
             prompt_tokens,
             alignment=self.layout.alignment_tokens,
-            chunk_tokens=CACHE_CHUNK_TOKENS,
-            min_span_tokens=MIN_SPAN_TOKENS,
-            max_span_tokens=MAX_SPAN_TOKENS,
+            chunk_tokens=self._chunk_tokens,
+            min_span_tokens=self._minimum_span,
         )
 
     def _safe_store_span(self, prompt_tokens: int) -> int:
@@ -1555,22 +1553,23 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
         return aligned_prefix_span(
             prompt_tokens + 1,
             alignment=self.layout.alignment_tokens,
-            chunk_tokens=CACHE_CHUNK_TOKENS,
-            min_span_tokens=MIN_SPAN_TOKENS,
-            max_span_tokens=MAX_SPAN_TOKENS,
+            chunk_tokens=self._chunk_tokens,
+            min_span_tokens=self._minimum_span,
         )
 
     def _maintain_capacity(self) -> None:
         if self._store is None or self._reporter is None:
             return
         try:
+            report = self._store.maintain_capacity_batch(
+                trigger_bytes=self.config.trigger_watermark_bytes,
+                remaining_candidates=self._capacity_remaining)
+            if report is None:
+                return  # An active reader/writer owns this rank; keep the quota.
+            self._capacity_remaining = report.candidates_remaining
+            if not (report.candidates_attempted or report.objects_removed):
+                return
             with self._store._exclusive():
-                if self._store.disk_usage_bytes() <= self.config.max_bytes:
-                    return
-                self._store.maintain_capacity(
-                    max_bytes=self.config.max_bytes,
-                    low_watermark_bytes=self.config.low_watermark_bytes,
-                )
                 offers = _scan_worker_catalog(self._store)
                 self._reporter.replace(
                     {offer.entry_id: offer.span_tokens for offer in offers}
@@ -1579,6 +1578,7 @@ class SpoolCacheConnector(KVConnectorBase_V1, SupportsHMA):
             # Namespace mutation may already have happened even if a following
             # directory fsync or callback failed. Withdraw the whole local
             # image now and reconcile on later stats cycles.
+            self._capacity_remaining = 0
             self._reporter.replace({})
             if self._scrub_scheduler is not None:
                 self._scrub_scheduler.require_inventory_rescan(
@@ -1604,26 +1604,29 @@ def _manifest_logical_bytes(manifest: object) -> int:
     return total
 
 
-def _scan_worker_catalog(store: ManifestStore) -> tuple[ManifestOffer, ...]:
+def _scan_worker_catalog(store: TokenFileStore) -> tuple[ManifestOffer, ...]:
     """Load the full fixed local catalog, independently of handshake size."""
 
-    return store.scan_offers(CATALOG_MAX_ENTRIES)
+    return store.scan_offers(inventory_capacity(INVENTORY_MEMORY_BYTES))
 
 
 def _prepare_worker_catalog(
-    store: ManifestStore,
+    store: TokenFileStore,
     *,
-    max_bytes: int,
-    low_watermark_bytes: int,
+    trigger_bytes: int,
 ) -> tuple[ManifestOffer, ...]:
-    """Enforce startup capacity before forming the only handshake image."""
+    """Complete at most one percentage round before the startup inventory."""
 
     with store._exclusive():
-        if store.disk_usage_bytes() > max_bytes:
-            store.maintain_capacity(
-                max_bytes=max_bytes,
-                low_watermark_bytes=low_watermark_bytes,
-            )
+        remaining = 0
+        while True:
+            report = store.maintain_capacity_batch(
+                trigger_bytes=trigger_bytes, remaining_candidates=remaining)
+            if report is None:
+                raise RuntimeError("startup capacity lock unexpectedly unavailable")
+            remaining = report.candidates_remaining
+            if not remaining:
+                break
         return _scan_worker_catalog(store)
 
 
@@ -2187,6 +2190,7 @@ def _build_deployment_identity(
     chunk_tokens: int,
     vllm_version: str,
     vllm_build_sha256: str,
+    storage_schema: str | None = None,
 ) -> DeploymentIdentity:
     parallel = vllm_config.parallel_config
     model = vllm_config.model_config
@@ -2212,6 +2216,7 @@ def _build_deployment_identity(
                 ) from error
     execution_payload = {
         "schema": "spoolcache-vllm-execution-config/v1",
+        "prefix_reuse_schema": TOKEN_FILE_SCHEMA if storage_schema is None else storage_schema,
         "vllm_config_compute_hash": vllm_config_hash,
         # Automatically consume every public component hash offered by this
         # vLLM build, including components introduced by future releases.

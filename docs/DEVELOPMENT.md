@@ -18,18 +18,29 @@ This installs the project in editable mode and supplies pytest and the Hugging
 Face CLI. It does not install vLLM, Torch or CUDA into the host environment.
 Tests requiring those components report skips when they are absent.
 
-Storage tests use real `O_DIRECT` even without a GPU. On Linux, point `TMPDIR`
-at a supported filesystem if the default temporary directory is unsuitable.
+Storage tests use real buffered files, fsync and Linux OFD locks without a GPU.
 A focused storage/configuration run is:
 
 ```bash
-uv run --locked pytest tests/test_direct_io.py tests/test_manifest_store.py \
+uv run --locked pytest tests/test_token_files.py tests/test_rank_store.py \
   tests/test_config_json.py tests/test_config_identity_prefix.py -q
 ```
 
 CI additionally runs `python -m unittest discover -s tests -v` on Python
-3.10–3.12. Use existing meaningful contract tests and failure injection rather
-than replacing the storage path with a buffered test mode.
+3.11–3.12. Use existing meaningful contract tests and failure injection rather
+than replacing the storage path with filesystem mocks.
+
+## Current storage tools
+
+- `benchmarks/bench_token_files.py`: model-independent byte-oracle and syscall
+  counts for producer, repeat, extension and branch workloads.
+- `benchmarks/token_file_evidence.py`: independent bounded token-chain/HMA audit
+  using expected runtime identity and geometry, plus the Gemma evidence driver.
+- `benchmarks/token_tp2_evidence.py`: TP=2 process/artifact and all-rank checks.
+- `benchmarks/verify_release_install.py`: exact installed-wheel authentication.
+
+Snapshot/slot A/B tools and their dedicated tests are retired. Their original
+source and results remain in the [local backup](receipts/HISTORICAL_RAW.md).
 
 ## Change workflow
 
@@ -140,15 +151,11 @@ multimodal tests so those caches cannot mask a persistent restore. For shorter
 producer/longer consumer tests, slice one deterministic token stream to prove
 an exact shared prefix.
 
-Authenticate entries with `benchmarks/verify_entry_content.py`. Supply the
-expected deployment/rank/topology/layout identities, coordinates, span and
-coverage from an independent trusted receipt. The tool's `--help` lists all
-required fields; do not infer expectations from the untrusted manifest itself.
-
-The text and multimodal clients accept `--skip-read` and `--skip-write`.
-Use both with a fresh `--cache-salt` for cold controls. The interference benchmark
-also uses both flags and generates a fresh salt for its GPU-only control. It
-checks that priming had zero cached tokens before measuring GPU reuse.
+Authenticate entries with `benchmarks/token_file_evidence.py`. Supply the
+expected runtime identity and group geometry; never infer identity from the
+file being audited. The fixed runner uses this token-chain auditor for every
+rank and exact boundary state. Audit reads are bounded and authenticate the
+complete chain under the rank maintenance gate.
 
 ## Fixed Gemma end-to-end regression
 
@@ -253,7 +260,7 @@ for the connector-free baseline and the limits of `VLLM_BATCH_INVARIANT=1`.
 | `bench_cuda_staging.py` / `bench_restore_pipeline.py` | Current gather/scatter staging and bounded CUDA event ownership |
 | `analyze_store_economics.py` | Interpret matched store and restore timings |
 | `soak_storage_maintenance.py` / `qualify_namespace_scaling.py` | Storage maintenance and filesystem namespace scaling |
-| `verify_entry_content.py` / `verify_release_install.py` | Authenticate cache contents and installed wheel contents |
+| `token_file_evidence.py` / `verify_release_install.py` | Authenticate cache contents and installed wheel contents |
 | `reset_gpu_prefix_cache.py` | Reset development process-local caches |
 
 These scripts live in `benchmarks/`. The old single-image visual probe has been

@@ -11,7 +11,7 @@ DGX Spark deployments are documented separately in [Lab qualification](LAB.md).
 
 1. Verify the intended vLLM model, revision, topology and allocator without
    persistent caching. Keep that working serving configuration as the baseline.
-2. Select local storage supporting SpoolCache's aligned `O_DIRECT` operations.
+2. Select local Linux storage supporting buffered I/O, file/directory fsync and OFD locks.
    Budget capacity per rank and leave room for staging writes and maintenance state.
 3. Install one authenticated wheel in every participant's runtime image.
 4. Generate connector configuration and pass it to vLLM. Keep production debug

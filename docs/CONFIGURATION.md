@@ -68,9 +68,13 @@ metrics continue to use integer bytes. For example:
 export SPOOLCACHE_MAX_SIZE=200
 ```
 
-Capacity is managed per rank, with background reclamation toward 90% of the
-configured maximum. It is a maintenance target, not a reservation or filesystem
-quota: in-flight writes, control state and quarantine require additional space.
+Capacity is managed per rank: at/above 80% of the configured maximum, a round
+attempts to evict 20% of token-file keys (rounded down, at least one).
+Rounds execute in bounded batches and have no fixed stop watermark; after a
+round, current occupancy determines whether another is needed. Data/state file
+sizes and pinned candidates affect the bytes reclaimed.
+This is not a reservation or filesystem quota: in-flight writes, control state
+and quarantine require additional space.
 For example, 200 GiB per rank is not a 200 GiB total budget for a multi-rank group.
 
 ## Direct JSON
@@ -92,10 +96,11 @@ This is the current interface; see [Migration](MIGRATION.md) for legacy settings
 
 ## Fixed implementation choices
 
-KV payload I/O always requires `O_DIRECT`. Unsupported roots fail initialization;
-there is no buffered payload fallback. Manifests and SQLite state use ordinary I/O.
-Each rank has separate 128 MiB pinned and 128 MiB aligned-I/O staging pools.
-Chunking, admission, inventory, scrub and GC low-watermark bounds are internal
+KV payloads and their embedded headers use ordinary buffered I/O. There is no
+I/O-mode option, O_DIRECT probe, io_uring ring or SQLite object index. Each rank
+has two 64 MiB CUDA-pinned transfer buffers and one 64 MiB CPU authentication
+buffer: 192 MiB explicit staging. OS page cache and runtime/model allocations
+are separate. Chunking, admission, inventory, scrub and GC bounds are internal
 constants, documented in [Design](SPOOLCACHE_DESIGN.md#resource-bounds).
 
 No model profile, compatibility selector, checkpoint-directory digest or I/O-mode

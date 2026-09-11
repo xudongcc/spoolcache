@@ -149,7 +149,7 @@ def prefix_digests(
     *,
     deployment_digest: str,
     cache_salt: str = "",
-    chunk_tokens: int = 256,
+    chunk_tokens: int,
     boundaries: Iterable[int] | None = None,
     multimodal_features: Sequence[MultimodalFeatureIdentity] = (),
 ) -> tuple[PrefixDigest, ...]:

@@ -1,9 +1,10 @@
-"""Validated configuration for the SpoolCache 0.1 connector."""
+"""Validated configuration and fixed bounds for token-file caching."""
 
 from __future__ import annotations
 
 import math
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
@@ -16,16 +17,41 @@ _GIB = 1024 * _MIB
 # These are correctness/memory bounds, not deployment tuning knobs. Keeping
 # them in one module makes the fixed resource budget auditable without asking
 # every launcher to reproduce a matrix of low-level environment variables.
-CACHE_CHUNK_TOKENS = 256
-MIN_SPAN_TOKENS = 1024
-MAX_SPAN_TOKENS = 1_048_576
 STAGING_SLOT_BYTES = 64 * _MIB
 STAGING_SLOT_COUNT = 2
 MAX_PENDING_RESTORES = 2
 MAX_PENDING_STORES = 1
-STARTUP_MAX_DIGESTS = 512
 REPORT_BATCH_SIZE = 64
-CATALOG_MAX_ENTRIES = 100_000
+INVENTORY_MEMORY_BYTES = 512 * _MIB
+
+# Conservative ownership accounting for one fixed-width inventory record. This
+# covers reporter/scheduler maps, checkpoint tuples, rank sets and temporary
+# transport copies per rank. Dictionary/set slack is charged at singleton
+# allocation cost, rather than assuming a full table's best-case load factor.
+_KEY_EXAMPLE = "0" * 64
+INVENTORY_ENTRY_BYTES = (
+    4 * (sys.getsizeof(_KEY_EXAMPLE) + sys.getsizeof((1 << 63) - 1))
+    + 6 * sys.getsizeof((_KEY_EXAMPLE, 1))
+    + 4 * (sys.getsizeof({_KEY_EXAMPLE: 1}) - sys.getsizeof({}))
+    + 2 * sys.getsizeof({0})
+    + 16 * (sys.getsizeof((None,)) - sys.getsizeof(()))
+)
+
+
+def inventory_capacity(memory_bytes: int) -> int:
+    """Record capacity derived from retained-memory allowance, not a key cap."""
+    if type(memory_bytes) is not int or memory_bytes < INVENTORY_ENTRY_BYTES:
+        raise ConfigurationError("inventory memory budget cannot hold one record")
+    return memory_bytes // INVENTORY_ENTRY_BYTES
+
+
+def aligned_chunk_tokens(alignment: int) -> int:
+    """Smallest whole runtime alignment covering at least 256 tokens."""
+    if type(alignment) is not int or alignment <= 0:
+        raise ConfigurationError("chunk alignment must be a positive integer")
+    # A floor avoids excess small files; it is not another page alignment.
+    # In particular, alignment 192 gives 384, not lcm(192, 256) == 768.
+    return ((256 + alignment - 1) // alignment) * alignment
 
 
 @dataclass(frozen=True)
@@ -59,10 +85,9 @@ class SpoolCacheConfig:
         return numerator * _GIB // denominator
 
     @property
-    def low_watermark_bytes(self) -> int:
-        """Fixed 90% GC target derived from the operator's capacity limit."""
-
-        return self.max_bytes * 9 // 10
+    def trigger_watermark_bytes(self) -> int:
+        """First whole byte at/above the 80% capacity trigger."""
+        return (self.max_bytes * 4 + 4) // 5
 
     @classmethod
     def from_mapping(cls, raw: Mapping[str, Any]) -> "SpoolCacheConfig":

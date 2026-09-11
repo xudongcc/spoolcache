@@ -70,6 +70,12 @@ pinned setuptools/wheel versions and sets `SOURCE_DATE_EPOCH` from that commit.
 If changes must remain uncommitted, finish local tests first and defer the
 release candidate build.
 
+The token-only package has no compiled extension and builds a `py3-none-any`
+wheel. The same authenticated wheel is installable on Python 3.11 and 3.12;
+serving still requires supported Linux locking, CUDA and vLLM contracts. The
+builder accepts `--python /path/to/python` for reproducible interpreter choice.
+No architecture-specific SpoolCache wheel matrix is required.
+
 From a clean candidate checkout:
 
 ```bash

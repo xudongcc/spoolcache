@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from unittest.mock import patch
 
+from spoolcache.config import INVENTORY_ENTRY_BYTES, INVENTORY_MEMORY_BYTES, inventory_capacity
+from spoolcache.config import aligned_chunk_tokens
 from spoolcache.errors import ConfigurationError, UnsupportedRuntimeError
 from spoolcache.maintenance import ScrubShutdownReport
 from spoolcache.quorum import (
@@ -666,6 +668,8 @@ class VLLMContractTests(unittest.TestCase):
         with patch.dict(sys.modules, modules):
             sys.modules.pop("spoolcache.vllm.connector", None)
             connector_module = importlib.import_module("spoolcache.vllm.connector")
+            from tests.token_connector_checks import check_token_connector
+            check_token_connector(self, connector_module)
             # Per-step metadata transports plans through vLLM. It has no
             # independent schema negotiation or persisted representation.
             plan = connector_module.SpoolCachePlan(
@@ -674,6 +678,39 @@ class VLLMContractTests(unittest.TestCase):
             )
             metadata = connector_module.SpoolCacheMetadata(loads=(plan,), stores=(plan,))
             self.assertEqual(pickle.loads(pickle.dumps(metadata)), metadata)
+            # Exercise scheduler digest planning through worker publication,
+            # rather than supplying hand-made aliases directly to storage.
+            from tests.token_fixtures import cpu_mover, layout_for
+            from tests.token_fixtures import open_store
+            prefix_layout = layout_for()
+            prefix_scheduler = types.SimpleNamespace(
+                layout=prefix_layout, _chunk_tokens=aligned_chunk_tokens(prefix_layout.alignment_tokens),
+                deployment_identity=types.SimpleNamespace(digest="b" * 64))
+            progress = connector_module._StoreProgress(
+                token_ids=list(range(2048)), multimodal_features=(), cache_salt="test-salt",
+                target_span_tokens=2048, block_ids_by_group=(tuple(range(1, 33)),))
+            prefix_plan = connector_module.SpoolCacheConnector._plan_from_progress(
+                prefix_scheduler, "fine-prefix", progress, 2048)
+            self.assertEqual(tuple(p.span_tokens for p in prefix_plan.prefixes), tuple(range(256, 2048, 256)))
+            self.assertEqual(pickle.loads(pickle.dumps(prefix_plan)), prefix_plan)
+            with tempfile.TemporaryDirectory() as prefix_root:
+                with open_store(Path(prefix_root) / "cache", layout=prefix_layout) as prefix_store:
+                    prefix_reporter = InventoryReporter(
+                        rank=0, generation="prefix", generation_epoch=1,
+                        max_bytes=(32) * INVENTORY_ENTRY_BYTES, max_report_entries=32)
+                    prefix_worker = types.SimpleNamespace(
+                        _worker_data_path=lambda: (cpu_mover(prefix_layout), prefix_store),
+                        deployment_identity=prefix_scheduler.deployment_identity,
+                        _rank_identity=types.SimpleNamespace(digest="c" * 64), _physical_rank=0,
+                        _topology_digest="d" * 64, _reporter=prefix_reporter,
+                        _telemetry=None, _maintain_capacity=lambda: None,
+                        _refresh_worker_metrics=lambda **kw: None)
+                    connector_module.SpoolCacheConnector._commit_store_plans(prefix_worker, (prefix_plan,))
+                    entries = dict(prefix_reporter.startup())
+                    self.assertEqual(entries[prefix_plan.entry_id], 2048)
+                    for prefix in prefix_plan.prefixes:
+                        self.assertEqual(entries[prefix.digest], prefix.span_tokens)
+                        self.assertTrue(prefix_store.lookup(prefix.digest, verify_payloads=True).is_hit)
             with self.assertRaises(TypeError):
                 connector_module.SpoolCacheMetadata(schema="unused")
             get_spec_kind_resolver = connector_module._get_public_spec_kind_resolver
@@ -1166,16 +1203,11 @@ class VLLMContractTests(unittest.TestCase):
             )
             self.assertEqual(
                 scanned_limits,
-                [connector_module.CATALOG_MAX_ENTRIES],
-            )
-            self.assertGreater(
-                connector_module.CATALOG_MAX_ENTRIES,
-                connector_module.STARTUP_MAX_DIGESTS,
+                [inventory_capacity(INVENTORY_MEMORY_BYTES)],
             )
 
             held_marker_entry = "1" * 64
             absent_marker_entry = "2" * 64
-            fenced_object = "3" * 64
 
             class MarkerReconciliationStore:
                 def __init__(self) -> None:
@@ -1186,40 +1218,34 @@ class VLLMContractTests(unittest.TestCase):
                     self.events.append("lock")
                     yield
 
-                def pending_inventory_withdrawals(self, entry_ids):
-                    self.events.append(("pending", tuple(entry_ids)))
-                    return (held_marker_entry,)
-
-                def inventory_withdrawal_marker_batch(self, limit, *, after=None):
+                def inventory_withdrawal_marker_batch(
+                    self, limit, *, after=None, withdraw=None,
+                ):
                     self.events.append(("entry-batch", limit, after))
+                    withdraw(held_marker_entry)
+                    withdraw(absent_marker_entry)
                     return (absent_marker_entry,), absent_marker_entry
 
-                def object_withdrawal_marker_batch(self, limit, *, after=None):
-                    self.events.append(("object-batch", limit, after))
-                    return (fenced_object,), fenced_object
 
                 def acknowledge_absent_inventory_withdrawals(self, entry_ids):
                     self.events.append(("ack-entry", tuple(entry_ids)))
 
-                def acknowledge_unreferenced_object_withdrawals(self, digests):
-                    self.events.append(("ack-object", tuple(digests)))
 
             marker_store = MarkerReconciliationStore()
             marker_reporter = InventoryReporter(
                 rank=0,
                 generation="marker-worker",
                 generation_epoch=1,
-                max_entries=connector_module.CATALOG_MAX_ENTRIES,
+                max_bytes=(inventory_capacity(INVENTORY_MEMORY_BYTES)) * INVENTORY_ENTRY_BYTES,
                 max_report_entries=connector_module.REPORT_BATCH_SIZE,
             )
             marker_reporter.replace({held_marker_entry: 256})
-            marker_reporter.startup(8)
+            marker_reporter.startup()
             marker_view = types.SimpleNamespace(
                 _role=KVConnectorRole.WORKER,
                 _reporter=marker_reporter,
                 _store=marker_store,
                 _inventory_marker_cursor=None,
-                _object_marker_cursor=None,
                 _telemetry=TelemetryBuffer(source="rank:0"),
                 _drain_scrub_maintenance=lambda: None,
                 _refresh_worker_metrics=lambda: None,
@@ -1235,15 +1261,10 @@ class VLLMContractTests(unittest.TestCase):
                 ("ack-entry", (absent_marker_entry,)),
                 marker_store.events,
             )
-            self.assertIn(
-                ("ack-object", (fenced_object,)),
-                marker_store.events,
-            )
             self.assertEqual(
                 marker_view._inventory_marker_cursor,
                 absent_marker_entry,
             )
-            self.assertEqual(marker_view._object_marker_cursor, fenced_object)
 
             class StartupCapacityProbe:
                 def __init__(self, *, usage: int, fail: bool = False) -> None:
@@ -1260,44 +1281,41 @@ class VLLMContractTests(unittest.TestCase):
                     self.events.append("usage")
                     return self.usage
 
-                def maintain_capacity(self, *, max_bytes, low_watermark_bytes):
-                    self.events.append(f"capacity:{max_bytes}:{low_watermark_bytes}")
+                def maintain_capacity_batch(self, *, trigger_bytes, remaining_candidates=0):
+                    self.events.append(f"capacity:{trigger_bytes}:{remaining_candidates}")
                     if self.fail:
                         raise OSError("startup capacity failed")
-                    self.usage = low_watermark_bytes
+                    if not remaining_candidates and self.usage < trigger_bytes:
+                        return types.SimpleNamespace(candidates_remaining=0)
+                    # The second part must complete even though usage is now <80%.
+                    self.usage -= 5
+                    return types.SimpleNamespace(
+                        candidates_remaining=0 if remaining_candidates else 1)
 
                 def scan_offers(self, limit):
                     self.events.append(f"scan:{limit}")
                     return ()
 
-            overfull = StartupCapacityProbe(usage=101)
+            capacity_config = connector_module.SpoolCacheConfig(max_size=100 / 1024**3)
+            below_trigger = StartupCapacityProbe(usage=79)
             self.assertEqual(
                 connector_module._prepare_worker_catalog(
-                    overfull,
-                    max_bytes=100,
-                    low_watermark_bytes=90,
-                ),
-                (),
-            )
+                    below_trigger, trigger_bytes=capacity_config.trigger_watermark_bytes), ())
+            self.assertEqual(below_trigger.usage, 79)
+            at_trigger = StartupCapacityProbe(usage=80)
             self.assertEqual(
-                overfull.events,
-                [
-                    "lock",
-                    "usage",
-                    "capacity:100:90",
-                    f"scan:{connector_module.CATALOG_MAX_ENTRIES}",
-                ],
-            )
-            failed_startup = StartupCapacityProbe(usage=101, fail=True)
+                connector_module._prepare_worker_catalog(
+                    at_trigger, trigger_bytes=capacity_config.trigger_watermark_bytes), ())
+            self.assertEqual(at_trigger.usage, 70)
+            self.assertEqual(at_trigger.events, ["lock", "capacity:80:0", "capacity:80:1",
+                                                 f"scan:{inventory_capacity(INVENTORY_MEMORY_BYTES)}"])
+            overfull = StartupCapacityProbe(usage=100)
+            connector_module._prepare_worker_catalog(overfull, trigger_bytes=80)
+            self.assertEqual(overfull.usage, 90)  # One round, not repeated to a low target.
+            failed_startup = StartupCapacityProbe(usage=80, fail=True)
             with self.assertRaisesRegex(OSError, "startup capacity failed"):
-                connector_module._prepare_worker_catalog(
-                    failed_startup,
-                    max_bytes=100,
-                    low_watermark_bytes=90,
-                )
-            self.assertFalse(
-                any(event.startswith("scan:") for event in failed_startup.events)
-            )
+                connector_module._prepare_worker_catalog(failed_startup, trigger_bytes=80)
+            self.assertFalse(any(event.startswith("scan:") for event in failed_startup.events))
 
             class FailedRescanScheduler:
                 def __init__(self) -> None:
@@ -1408,11 +1426,11 @@ class VLLMContractTests(unittest.TestCase):
                 rank=0,
                 generation="boot",
                 generation_epoch=1,
-                max_entries=8,
+                max_bytes=8 * INVENTORY_ENTRY_BYTES,
                 max_report_entries=8,
             )
             coordinated_reporter.replace({entry: 256})
-            coordinated_reporter.startup(8)
+            coordinated_reporter.startup()
             rescan_scheduler = RescanScheduler()
             coordinated_view = types.SimpleNamespace(
                 _scrub_scheduler=rescan_scheduler,
@@ -1467,12 +1485,12 @@ class VLLMContractTests(unittest.TestCase):
             publication_store = PublicationStore()
 
             class PublicationMover:
-                def commit(self, _store, **_kwargs):
+                def commit_keys(self, _store, **_kwargs):
                     publication_complete.set()
                     if not publication_mutation_attempted.wait(5):
                         raise AssertionError("publication mutation did not start")
                     return types.SimpleNamespace(
-                        objects=(types.SimpleNamespace(byte_length=4096),)
+                        objects=(types.SimpleNamespace(key=published_entry, span_tokens=256, byte_length=4096),)
                     )
 
             class PublicationReporter(InventoryReporter):
@@ -1496,10 +1514,10 @@ class VLLMContractTests(unittest.TestCase):
                 rank=0,
                 generation="publication-race",
                 generation_epoch=1,
-                max_entries=8,
+                max_bytes=8 * INVENTORY_ENTRY_BYTES,
                 max_report_entries=8,
             )
-            publication_reporter.startup(8)
+            publication_reporter.startup()
             publication_view = types.SimpleNamespace(
                 _worker_data_path=lambda: (PublicationMover(), publication_store),
                 deployment_identity=types.SimpleNamespace(digest="a" * 64),
@@ -1546,11 +1564,11 @@ class VLLMContractTests(unittest.TestCase):
                 rank=0,
                 generation="boot",
                 generation_epoch=1,
-                max_entries=8,
+                max_bytes=(8) * INVENTORY_ENTRY_BYTES,
                 max_report_entries=8,
             )
             forced_reporter.replace({entry: 256})
-            forced_reporter.startup(8)
+            forced_reporter.startup()
             forced_view = types.SimpleNamespace(
                 _scrub_scheduler=forced_scheduler,
                 _telemetry=TelemetryBuffer(source="rank:0"),
@@ -1578,8 +1596,8 @@ class VLLMContractTests(unittest.TestCase):
                 def disk_usage_bytes(self):
                     return 101
 
-                def maintain_capacity(self, *, max_bytes, low_watermark_bytes):
-                    self.capacity_args = (max_bytes, low_watermark_bytes)
+                def maintain_capacity_batch(self, *, trigger_bytes, remaining_candidates=0):
+                    self.capacity_args = (trigger_bytes, remaining_candidates)
                     raise OSError("capacity directory fsync failed")
 
             class CapacityRescanScheduler:
@@ -1593,26 +1611,51 @@ class VLLMContractTests(unittest.TestCase):
             capacity_reporter = RecordingReporter()
             capacity_scheduler = CapacityRescanScheduler()
             capacity_view = types.SimpleNamespace(
+                _capacity_remaining=7,
                 _store=failed_capacity_store,
                 _reporter=capacity_reporter,
                 _scrub_scheduler=capacity_scheduler,
-                config=types.SimpleNamespace(
-                    max_bytes=100,
-                    low_watermark_bytes=90,
-                ),
+                config=capacity_config,
             )
             with patch.object(connector_module.logger, "exception"):
                 connector_module.SpoolCacheConnector._maintain_capacity(
                     capacity_view
                 )
-            self.assertEqual(failed_capacity_store.capacity_args, (100, 90))
+            self.assertEqual(failed_capacity_store.capacity_args, (80, 7))
+            self.assertEqual(capacity_view._capacity_remaining, 0)
             self.assertEqual(capacity_reporter.replacements, [{}])
             self.assertEqual(capacity_scheduler.force_withdrawal, [True])
 
+            class WorkingCapacityStore(FailedCapacityStore):
+                def __init__(self):
+                    self.quotas = []
+                    self.reports = iter((None,
+                        types.SimpleNamespace(candidates_attempted=4, objects_removed=4,
+                                              candidates_remaining=1),
+                        None,
+                        types.SimpleNamespace(candidates_attempted=1, objects_removed=1,
+                                              candidates_remaining=0),
+                        types.SimpleNamespace(candidates_attempted=0, objects_removed=0,
+                                              candidates_remaining=0)))
+
+                def maintain_capacity_batch(self, *, trigger_bytes, remaining_candidates=0):
+                    self.quotas.append(remaining_candidates)
+                    return next(self.reports)
+
+                def scan_offers(self, limit):
+                    return ()
+
+            working_capacity = WorkingCapacityStore()
+            capacity_view._store = working_capacity
+            for expected_remaining in (0, 1, 1, 0, 0):
+                connector_module.SpoolCacheConnector._maintain_capacity(capacity_view)
+                self.assertEqual(capacity_view._capacity_remaining, expected_remaining)
+            self.assertEqual(working_capacity.quotas, [0, 0, 1, 1, 0])
+
             original_catalog = connector._catalog
             class AlwaysHitCatalog:
-                def longest(self, _candidates):
-                    return 1024, "e" * 64
+                def has_quorum(self, key, span):
+                    return span <= 1024
 
             connector._catalog = AlwaysHitCatalog()
             connector._pending_loads = {
@@ -1711,13 +1754,12 @@ class VLLMContractTests(unittest.TestCase):
                     )
                     connector.on_new_request(read_request)
                     with patch.object(connector, "_catalog") as catalog:
-                        catalog.longest.return_value = (1024, "e" * 64)
                         catalog.has_quorum.return_value = False
                         self.assertEqual(
                             connector.get_num_new_matched_tokens(read_request, 0),
                             (0, False),
                         )
-                        catalog.longest.assert_not_called()
+                        catalog.has_quorum.assert_not_called()
                         self.assertNotIn("skip-read", connector._need_load)
                         new_request = types.SimpleNamespace(
                             req_id="skip-read", prompt_token_ids=[1] * 1025,
@@ -1884,6 +1926,9 @@ class VLLMContractTests(unittest.TestCase):
                 processor_size=448,
                 attention_backend="backend-a",
             )
+            with patch.object(connector_module, "TOKEN_FILE_SCHEMA", "different-storage-contract"):
+                self.assertNotEqual(identity_with(processor_size=448, attention_backend="backend-a").digest,
+                                    identity_a.digest)
             identity_b = identity_with(
                 processor_size=896,
                 attention_backend="backend-a",
@@ -2010,7 +2055,7 @@ class VLLMContractTests(unittest.TestCase):
                         generation="bounded",
                         generation_epoch=1,
                         entries=(("e" * 64, 1024),)
-                        * (connector_module.STARTUP_MAX_DIGESTS + 1),
+                        * (inventory_capacity(INVENTORY_MEMORY_BYTES) + 1),
                     ),
                 )
             )
