@@ -8,10 +8,11 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 
-def build(root: Path, output: Path) -> Path:
+def build(root: Path, output: Path, *, python: Path = Path(sys.executable)) -> Path:
     def git(*args: str) -> str:
         return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
 
@@ -31,7 +32,7 @@ def build(root: Path, output: Path) -> Path:
         )
         subprocess.run(["tar", "-xf", "-", "-C", str(source)], input=archive, check=True)
         subprocess.run(
-            ["uv", "build", "--wheel", "--out-dir", str(output.resolve()), str(source)],
+            ["uv", "build", "--python", str(python.resolve()), "--wheel", "--out-dir", str(output.resolve()), str(source)],
             env={**os.environ, "SOURCE_DATE_EPOCH": epoch, "PYTHONHASHSEED": "0"},
             check=True,
         )
@@ -44,6 +45,7 @@ def build(root: Path, output: Path) -> Path:
         "source_date_epoch": int(epoch), "wheel": wheel.name,
         "wheel_sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
         "build_requires": ["setuptools==80.9.0", "wheel==0.45.1"],
+        "build_python": str(python.resolve()),
     }
     (output / "release.json").write_text(json.dumps(receipt, indent=2) + "\n")
     return wheel
@@ -52,5 +54,7 @@ def build(root: Path, output: Path) -> Path:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path("dist/release"))
+    parser.add_argument("--python", type=Path, default=Path(sys.executable),
+                        help="target interpreter path (defaults to this script's Python)")
     args = parser.parse_args()
-    print(build(Path(__file__).resolve().parents[1], args.output))
+    print(build(Path(__file__).resolve().parents[1], args.output, python=args.python))

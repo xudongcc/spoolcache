@@ -9,7 +9,7 @@ from spoolcache.hma import (
     VLLM_RUNTIME_KV_PROFILE,
     build_hma_layout as _build_hma_layout,
 )
-from spoolcache.manifest import ObjectDescriptor, RankManifest, ordered_descriptors
+from spoolcache.manifest import PageSlice, TokenFileDescriptor, TokenSnapshot
 
 
 class FullAttentionSpec:
@@ -951,31 +951,23 @@ class HMALayoutTests(unittest.TestCase):
                     f"{group.group_index}:{layer.name}".encode()
                 ).hexdigest()
                 descriptors.append(
-                    ObjectDescriptor(
-                        group_index=group.group_index,
-                        layer_name=layer.name,
-                        page_start=0,
-                        page_count=count,
+                    TokenFileDescriptor(
+                        key=digest, parent=None, span_tokens=256,
+                        segments=(PageSlice(group.group_index, layer.name, 0,
+                                            count, count * layer.page_size_bytes),),
                         byte_length=count * layer.page_size_bytes,
-                        stored_length=count * layer.page_size_bytes,
-                        sha256=digest,
-                        relative_path=f"objects/{digest[:2]}/{digest}.spool",
+                        sha256=digest, payload_offset=0, metadata_digest=digest,
                     )
                 )
-        manifest = RankManifest(
+        manifest = TokenSnapshot(
             entry_id="a" * 64,
-            deployment_identity_digest="b" * 64,
-            rank_identity_digest="c" * 64,
             span_tokens=256,
-            physical_rank=0,
-            topology_digest="d" * 64,
             profile=VLLM_RUNTIME_KV_PROFILE,
             layout_digest=layout.digest,
-            objects=ordered_descriptors(descriptors),
-            created_at_unix_ns=1,
+            objects=tuple(descriptors),
         )
         layout.validate_manifest_coverage(manifest)
-        incomplete = RankManifest(
+        incomplete = TokenSnapshot(
             **{
                 **manifest.__dict__,
                 "objects": manifest.objects[:-1],

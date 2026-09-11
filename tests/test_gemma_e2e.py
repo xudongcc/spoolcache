@@ -104,7 +104,7 @@ class GemmaRegressionTests(unittest.TestCase):
 class RankEvidenceTests(unittest.TestCase):
     def test_missing_rank_restore_cannot_pass_on_api_hit(self):
         from types import SimpleNamespace
-        from benchmarks.gemma_e2e_evidence import Evidence as RankEvidence
+        from benchmarks.token_file_evidence import TokenFileEvidence as RankEvidence
         with tempfile.TemporaryDirectory() as directory:
             args = SimpleNamespace(head_container="head", worker_container="worker",
                                    topology="pp2", output=Path(directory))
@@ -117,7 +117,7 @@ class RankEvidenceTests(unittest.TestCase):
 
     def test_conflicting_scheduler_entries_fail(self):
         from types import SimpleNamespace
-        from benchmarks.gemma_e2e_evidence import Evidence as RankEvidence
+        from benchmarks.token_file_evidence import TokenFileEvidence as RankEvidence
         with tempfile.TemporaryDirectory() as directory:
             args = SimpleNamespace(head_container="head", topology="pp1", output=Path(directory))
             evidence = RankEvidence(args, "model", "revision")
@@ -130,13 +130,13 @@ class RankEvidenceTests(unittest.TestCase):
     def test_pp_stage_deployments_can_differ_but_restart_must_cover_both(self):
         import json
         from types import SimpleNamespace
-        from benchmarks.gemma_e2e_evidence import Evidence as RankEvidence
+        from benchmarks.token_file_evidence import TokenFileEvidence as RankEvidence
         args = SimpleNamespace(head_container="head", worker_container="worker", topology="pp2",
                                image_id="image")
         evidence = RankEvidence(args, "model", "revision")
         logs = [f"spoolcache: rank identity rank={rank} pp_rank={rank} deployment=stage{rank} "
                 f"rank_identity=rank{rank} topology=shared hma_layout=aa\n"
-                f"spoolcache: worker ready rank={rank} root=/cache/{rank}\n"
+                f"spoolcache: worker ready rank={rank} root=/cache/{rank} transfer_bytes=67108864\n"
                 "spoolcache: HMA runtime layout profile=fixture groups=[] layers=0 alignment=32 "
                 "logical_digest=bb physical_digest=aa\n" for rank in (0, 1)]
         def states(started):

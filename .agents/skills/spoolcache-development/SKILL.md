@@ -55,8 +55,9 @@ SpoolCache functionality.
   not repair a changed runtime contract with `int()` or another coercion before
   deriving rank ownership, paths, or identities.
 - Keep payload memory bounded by fixed staging slots. The internal pinned
-  budget is two 64 MiB slots per rank; account separately for the
-  aligned I/O pool until a shared pool is actually shipped.
+  budget is two 64 MiB slots per rank plus one 64 MiB CPU authentication
+  slot: 192 MiB explicit payload staging. Account for metadata, OS page cache
+  and the model runtime separately. The sole backend uses buffered I/O.
 - Apply scheduler admission bounds to the complete in-flight lifecycle, not
   just one transient map. In particular, count restore lookups awaiting
   allocation together with allocated plans awaiting connector metadata.
@@ -103,18 +104,24 @@ SpoolCache functionality.
   allocator/group. If an admission-bound capability exists, it must also prove
   exactly one block at the deployment's real public bounds. Never infer
   universality from sampled lengths, and reject booleans as integer results.
-- Keep immutable objects and publish manifests last with durable filesystem
-  ordering. Never serialize CUDA pointers, allocator block IDs, or request IDs.
-- Deep scrub one complete rank identity, never an unbound directory. Persist
-  manifest/object work queues, the live-reference set, and the cursor at
-  complete object boundaries. Cycle start must stay constant-time: stream each
-  namespace into its work table in fixed item batches, cancel between items,
-  and after a restart rescan the active namespace phase with idempotent inserts
-  instead of persisting unstable directory offsets. Resume payload work from
-  durable progress instead of trusting a partial hash. Validate manifest
-  identity before any payload read, then validate regular-file type,
-  stored/logical length, logical SHA-256, and zero padding. Quarantine corrupt
-  objects plus every referring manifest and withdraw their reporter offers.
+- Publish self-contained token files durably: write header and payload to a
+  temporary, fsync it, publish the immutable key and fsync its shard before
+  reporter admission. Each full-KV file covers the smallest multiple of the
+  runtime's common reusable-group alignment that is at least 256 tokens;
+  scratch capacity is excluded. Larger files stream through fixed
+  credits, authenticating each range before GPU placement. Mixed HMA also needs
+  an exact-boundary state file. Consecutive data keys and required state need
+  every-rank quorum. Never serialize CUDA pointers, block IDs or request IDs.
+- Pin the complete restore key set before releasing the namespace lock, and
+  retain pins through the final CUDA drain. Release a failed read's staging
+  credit before taking the quarantine lock so a concurrent writer cannot
+  deadlock while waiting for that credit.
+- Deep scrub one complete rank identity. Persist a lexical key cursor after
+  complete file authentication, with fixed-size selection batches. Validate
+  header identity, regular-file type, exact length and payload SHA-256 before
+  success. Recheck concurrent target/cycle state under the rank lock; skip
+  pinned keys. Files added behind the cursor are visited next cycle. There is
+  no SQLite work queue or shared-reference graph.
 - Reserve every worker inventory generation from a strict rank-local
   `state/generation.json` under the maintenance lock. Migrate legacy raw-clock
   epochs into a disjoint high domain and persist a separate initialization
@@ -129,34 +136,18 @@ SpoolCache functionality.
   standalone maintenance must not compete for that lease; it leaves durable
   withdrawal markers which the sole reporter consumes under the maintenance
   lock before constructing its next stats report.
-- Persist an entry-specific withdrawal marker before trying to rename a
-  manifest whose payload is already known bad. A metadata-only inventory scan
-  must honor that marker across process reopen and may not clear it. Retire it
-  only after quarantine proves the live manifest absent or a complete
-  replacement commit recaptures and validates every object. Keep manifest
-  visibility plus `reporter.add`, and catalog scan plus `reporter.replace`, in
-  their respective single maintenance critical sections so a concurrent
-  remove cannot be overwritten by a stale add or snapshot.
-- When a content-address collision reveals corrupt existing bytes, withdraw
-  its whole shared-reference set crash-atomically: persist a digest-level
-  object fence before traversing manifests, make lookup/startup scan/bounded
-  reporter reconciliation honor that fence, and stream reference withdrawal
-  without retaining an unbounded list. Preserve the bad inode with a durable
-  evidence hardlink, then atomically replace the live name with the already-
-  fsynced temporary object. Any link/replace/directory-fsync error keeps the
-  fence/tombstones; only a fully durable repair/quarantine receipt or a deep
-  scrub final locked re-hash may release the object fence.
-- Treat entry tombstones as deliberately provenance-free. Repairing one object
-  may clear only that digest's object fence; it must never clear tombstones for
-  referring entries because another object or failed operation may still make
-  the manifest unsafe. Only a complete replacement commit or final locked
-  authentication of every object in that exact manifest may clear its entry
-  tombstone, and an authenticated release must request inventory rescan.
+- Persist a key-specific withdrawal marker before quarantining known bad
+  bytes. Metadata-only inventory must honor it across reopen. Only durable
+  absence, complete replacement or authentication of that exact key can clear
+  it. Keep publication/reporter admission and catalog scan/replacement inside
+  their respective rank critical sections, so a stale add cannot undo removal.
+  Withdrawing an intermediate key makes dependent chains miss through
+  consecutive-key quorum; do not reintroduce object fences or reference GC.
 - A marker operation has a durability receipt only after its parent directory
   fsync succeeds. Idempotent marker creation must re-fsync the parent even when
   the marker already exists, so a retry can complete a prior failed receipt.
   Apply the same rule to managed top-level namespaces, lock/marker namespaces,
-  and object/manifest shard directories: validating an existing directory does
+  and token-file shard directories: validating an existing directory does
   not prove that its link survived an earlier failed ancestor fsync. Keep shard
   initialization inside the temporary payload's cleanup scope so a persistent
   parent-fsync failure cannot accumulate one full `.part` file per retry.
@@ -164,15 +155,14 @@ SpoolCache functionality.
   secondary cleanup failure must never replace the primary publication or
   durable-state exception; preserve the primary and attach bounded diagnostics.
   Before acknowledging an absent-entry marker, fsync its manifest shard and
-  recheck absence under the maintenance lock. Before acknowledging an
-  unreferenced object fence, fsync the fixed canonical manifest-shard namespace
-  and recheck all references; never make marker deletion more durable than the
-  namespace mutation it certifies.
-- Enumerate durable entry withdrawal markers in fixed-size, cursor-driven
-  pages. A worker startup and every stats report must remove held entries before
-  constructing the wire image, then acknowledge markers whose manifests are
-  absent. Include markers created while no inventory owner was online; never
-  restrict cleanup to the reporter's current held set.
+  recheck absence under the maintenance lock. Never make marker deletion more
+  durable than the namespace mutation it certifies.
+- Stream actual durable entry withdrawal markers before every startup/stats
+  report, removing all marked held keys before constructing the wire image.
+  Never truncate withdrawals to the acknowledgement page or probe every healthy
+  inventory key in an empty marker namespace. Acknowledge durably absent keys
+  in fixed-size, cursor-driven pages, including markers created while no owner
+  was online. Never mutate the marker directory during its active scan.
 - Build bounded startup/rescan inventory by streaming validation before heap
   selection. Do not select the newest raw `limit` paths and then filter them:
   newer tombstones or corrupt manifests would starve older healthy offers even
@@ -185,11 +175,12 @@ SpoolCache functionality.
   and payload type/value errors. Lookup/scan may quarantine these as clean
   misses; do not catch `MemoryError`, filesystem errors outside the existing
   I/O boundary, or arbitrary implementation exceptions as corrupt data.
-- Delete an orphan only after a complete manifest namespace pass and a final
-  live-reference recheck under the cross-process maintenance lock. Treat
-  unrecognized managed paths and links as quarantine candidates, not paths to
-  follow. Under capacity pressure, reclaim proven crash orphans before healthy
-  LRU manifests and continue from the high watermark to the low watermark.
+- Recover only recognized abandoned token temporaries under the rank lock;
+  preserve unrecognized paths and quarantine evidence. Capacity GC starts at
+  80% and attempts 20% of keys per round, at most four candidates per batch,
+  with no fixed stop watermark. Use persisted file-mtime LRU, reverse batch
+  touches to favor earlier prefix keys, and skip pinned keys. Keep namespace
+  scans bounded in memory and qualify their cost under sustained pressure.
 - Treat model locator/revision as a deployment namespace, not byte-level
   checkpoint attestation. SpoolCache authenticates its own KV payload and does
   not scan, copy, rewrite, or inventory an entire model repository. Operators
@@ -211,7 +202,7 @@ SpoolCache functionality.
   installed bytes, import origin and absence of stale modules. Keep production
   development endpoints disabled; use the separate Gemma qualification harness.
 - Do not ship future-only planners in `src/spoolcache`. Layerwise restore,
-  incremental publication, shared staging, async store, native movers and
+  shared staging, async store, native movers and
   compression are not active Goals. Create a new Goal only when an apples-to-
   apples benchmark proves a falsifiable need and the current public ownership
   contract supports one replacement path. When a replacement ships, delete
@@ -241,6 +232,19 @@ SpoolCache functionality.
   identity lengths and numeric counters. A startup subset is a safe false
   negative and should roll forward without rank withdrawal; any actual gap or
   malformed report withdraws the rank until a complete checkpoint arrives.
+  Large additions also roll forward in bounded deltas. Prioritize removals;
+  oversized removals must still withdraw the rank immediately. Checkpoints
+  describe the emitted sequence, never a mixture with unreported additions.
+  Inventory capacity is derived from the conservative retained-memory allowance,
+  not a fixed key count. Long-chain descriptors share the runtime layout and
+  coverage validation uses per-layer cursors. Do not restore the former
+  4,096-key, 4 MiB combined-header or million-token caps. The user also removed
+  the per-chain 64 MiB descriptor quota: do not restore descriptor accounting
+  or repeated whole-prefix admission on file publication. Retain individual-file
+  framing/checksum checks. Report active-chain memory growth separately from
+  the fixed payload staging and inventory allowances.
+  Startup sends the complete bounded held catalog. Do not take a further key
+  slice that cuts token chains and requires unrelated requests before reuse.
 - Never print API keys or the contents of deployment `.env`/`.env.dspark`
   files.
 
@@ -350,12 +354,10 @@ process to poll the workload's current Linux VmRSS from `/proc/<pid>/status`
 with a post-start baseline; inherited process-lifetime `ru_maxrss` is
 diagnostic only and must not decide pass/fail. Include a native-allocation
 negative test whose burst remains below the old process high-water but is still
-captured by the sampler. Sample every scrub SQLite artifact after lightweight
-`start_cycle()`, after every incremental namespace-snapshot step, and after
-every payload/cleanup step; a database size observed only after work-table
-deletion and FULL auto-vacuum is not a peak-memory receipt.
-Include a deliberately enlarged work queue and assert the emitted receipt's
-pre-vacuum high-water is greater than its final idle database size.
+captured by the sampler. Sample token metadata, staging and scrub/control-state
+peaks throughout incremental work; idle measurements alone are not peak-memory
+evidence. Keep historical SQLite queue/vacuum receipts scoped to the retired
+backend.
 
 ## Handle GPU-only cache reset
 
@@ -384,18 +386,18 @@ do not claim that a same-process warm request proves an NVMe restore.
   any payload I/O or success status.
 - Record live receipts in the performance notes, including failures and
   nondeterminism discovered during qualification.
-- For a live corruption test, select exactly one authenticated manifest object
-  from a known entry, record its expected digest and length, and make an
+- For a live corruption test, select one authenticated token file from a
+  known prefix, record its expected digest/length and dependent chains, and make an
   authenticated narrow backup. Change one byte only after the scheduler has a
   quorum offer. Require the client to reject an incomplete stream, observe
   readiness false and fatal exit 70, prove that all ranks stop, and restore the
-  exact object before the replacement group can offer it. Verify the restored
+  exact file before the replacement group can offer it. Verify the restored
   digest, full payload set, cross-restart cached-token count, all-rank
   entry/span agreement, and output oracle. Never delete or reset the
   persistent cache root to prepare or clean up this test.
-- For a pre-admission scrub qualification, request a targeted scrub through
-  `spoolcache.maintenance`, wait for the durable status to identify that exact
-  entry as `quarantined`, and prove both the live manifest/object removal and
+- For a pre-admission scrub qualification, request a targeted key through an
+  identity-bound `TokenFileScrubber`; the retired snapshot request/status CLI
+  is unavailable. Wait for that key to be `quarantined`, proving removal and
   the bounded quarantine metrics. The rank-local receipt is not yet a
   scheduler receipt: vLLM transports worker stats after an iteration. Wait for
   the quorum gauge to withdraw the entry; if the service is idle, drive one

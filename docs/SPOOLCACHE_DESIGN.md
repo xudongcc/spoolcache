@@ -1,34 +1,59 @@
 # Design
 
-SpoolCache is an external vLLM V1 KV connector with persistent, rank-local
-storage. Its contracts are exact-prefix identity, complete-group restore,
-bounded staging memory and authenticated durable publication. It uses public
-vLLM hooks and leaves model serving, process supervision and deployment to vLLM
-and the operator.
+SpoolCache is one external vLLM V1/HMA connector with rank-local persistent
+token files. It uses public runtime contracts and leaves serving, orchestration
+and model choice to vLLM and the deployment. Earlier snapshot/slot implementations
+are retired; historical evidence is indexed in [Performance notes](PERFORMANCE_IMPLEMENTATION_NOTES.md).
 
-This document describes the current implementation. Historical alternatives,
-measurements and review details are preserved in [the archive](archive/README.md)
-and indexed by [Performance notes](PERFORMANCE_IMPLEMENTATION_NOTES.md).
+## Token-file storage
+
+The default `spoolcache.vllm.connector.SpoolCacheConnector` stores one file per
+complete runtime-aligned full-KV interval per rank, using token-chained keys inspired
+by LMCache and bounded buffered transfers inspired by SparkCache. Keys include
+earlier tokens, salt, media and deployment identity. There is no explicit tree,
+separate physical packing unit, slot arena, reference graph or native I/O engine.
+
+Let A be the least common multiple of every reusable group's logical page span
+(including DCP sharding). One-page scratch capacity does not constrain A.
+The file interval is `ceil(256 / A) * A`: the smallest aligned width of at least
+256 tokens. For example, A=32 gives 256, A=192 gives 384, and A=1664 gives 1664.
+The floor limits small-file overhead; it is not another alignment constraint.
+There is no model-dependent chunk setting.
+Files are distributed by the first two hex key characters across up to 256
+on-demand directories. This filesystem sharding does not affect token intervals.
+
+Mixed HMA additionally needs an independently keyed file containing complete
+non-full state at the exact captured boundary. Its key binds the terminal prefix.
+Missing earlier window/recurrent state cannot be reconstructed from a longer
+prefix. Data/state files share publication, pin, scrub and GC contracts.
 
 ## Components and ownership
 
 | Component | Responsibility |
 | --- | --- |
-| [Connector](../src/spoolcache/vllm/connector.py) | Scheduler/worker hooks, admission, metadata exchange and completion |
-| [Compatibility gate](../src/spoolcache/vllm/compat.py) | Public-call compatibility and installed-runtime attestation |
-| [HMA discovery](../src/spoolcache/hma.py) | Runtime cache semantics, groups, layer ownership and reuse boundaries |
-| [Identity](../src/spoolcache/identity.py), [prefix](../src/spoolcache/prefix.py), [topology](../src/spoolcache/topology.py) | Model/runtime namespace, exact-prefix keys and participant coordinates |
-| [Quorum](../src/spoolcache/quorum.py) | Bounded worker inventories and complete-participant offers |
-| [GPU mover](../src/spoolcache/gpu.py) and [buffers](../src/spoolcache/buffers.py) | Fixed staging slots and transfer ownership |
-| [Store](../src/spoolcache/store.py) and [manifests](../src/spoolcache/manifest.py) | Immutable objects, durable publication, lookup, quarantine and GC |
-| [Maintenance](../src/spoolcache/maintenance.py) | Resumable scrub and targeted requests |
-| [Telemetry](../src/spoolcache/telemetry.py) and [journal](../src/spoolcache/event_journal.py) | Bounded observations and durable counters |
+| [Connector](../src/spoolcache/vllm/connector.py) | Public hooks, plans, complete-participant admission and inventory |
+| [Compatibility](../src/spoolcache/vllm/compat.py), [HMA](../src/spoolcache/hma.py) | Runtime admission, semantic discovery and complete page coverage |
+| [Token files](../src/spoolcache/token_files.py), [metadata](../src/spoolcache/manifest.py) | One file per key, chained lookup, authentication and LRU |
+| [Rank store](../src/spoolcache/rank_store.py), [pins](../src/spoolcache/leases.py) | Directory ownership, durable generations, locks and withdrawal |
+| [Token mover](../src/spoolcache/token_mover.py), [GPU primitives](../src/spoolcache/gpu.py), [buffers](../src/spoolcache/buffers.py) | Missing-key capture, opaque page copies and bounded credits |
+| [Token scrub](../src/spoolcache/token_scrub.py), [scheduler](../src/spoolcache/maintenance.py) | Authenticated cursor progress, rate limits and bounded shutdown |
+| Identity, prefix, topology and quorum | Model/runtime identity, chained keys and cross-rank agreement |
+| Telemetry and event journal | Bounded observations and durable counters |
 
-The scheduler chooses logical prefix IDs. Workers capture and restore their
-own physical shard. Disk payloads are not exchanged between hosts. There is no
-standalone SpoolCache engine, CPU L1, remote backend or in-package supervisor.
+The scheduler owns logical keys; each worker captures/restores its physical
+shard. There is no second backend, CPU L1, remote payload service or in-package
+process supervisor.
 
 ## Runtime admission
+
+User constraint reaffirmed on 2026-09-11: keep implementation and qualification
+rules independent of model names. Derive cache geometry, state dependencies and
+interface capabilities from runtime facts; do not add model defaults, profiles,
+allowlists or exceptions. Model locators/revisions identify benchmark fixtures
+and persistence namespaces only. Evidence tools must also derive page geometry
+from recorded runtime data and record observed native-cache behavior instead of
+assuming a repeated request must hit. Unknown or contradictory contracts still
+fail closed.
 
 Startup inspects the installed public V1 connector interface and proves that
 SpoolCache overrides accept its call shapes. It also attests installed vLLM
@@ -111,136 +136,120 @@ combined delta, pending checkpoint and rank count. A bounded startup subset is
 a safe false negative. Gaps and malformed reports withdraw the rank until a
 complete checkpoint arrives.
 
+Bulk additions are emitted over bounded deltas; existing synchronized entries
+stay available while new keys wait in the held catalog. Removals take priority
+in the next report. If those removals exceed one report, an intentional sequence
+gap withdraws the rank until its replacement checkpoint completes. Checkpoints
+bind the emitted inventory sequence rather than unreported additions.
+
 ## Internal protocol boundaries
 
-| Boundary | Active contract |
-| --- | --- |
-| Scheduler to worker plans | `SpoolCacheMetadata` carries `loads` and `stores` through vLLM; workers check its Python type. There is no separately negotiated metadata schema. |
-| Worker startup and inventory | Coordination digests bind runtime/layout/topology; bounded reports and complete PP×TP quorum control admission. |
-| Persistent cache | Manifest/envelope schemas, layout protocol identity and deployment/rank digests authenticate stored data. |
+The file schema `spoolcache-token-key-file/v3` and each embedded header bind the
+deployment, physical rank, topology, HMA layout, data/state kind, key/parent,
+span, derived chunk width, transfer credit, page segments, length, whole-payload
+hash and bounded per-transfer hashes. The framed header has its own
+checksum. Metadata must match runtime-derived expectations before payload I/O.
 
-`vllm-runtime-kv-v1` is the fixed internal layout protocol identifier stored in
-`profile` fields. Manifest lookup and HMA coverage validate it; it is not a
-removed operator profile setting. `StorePlanLike(Protocol)` is a Python typing
-contract for store admission, not a network protocol. Model namespaces and
-filesystem namespaces likewise serve identity and directory ownership; neither
-reintroduces the removed `SPOOLCACHE_NAMESPACE` setting.
-
-The former `SpoolCacheMetadata.schema` field had no reader or validation and has
-been removed. Persistent schema versions and crash-recovery generation handling
-remain active correctness checks.
+Layout, coordination and durable generation protocols remain independent:
+scheduler logical layout differs from worker physical byte geometry, while
+every worker must match the scheduler coordination identity. Per-step connector
+metadata carries plans through vLLM without another schema negotiation layer.
+Old cache roots are not reinterpreted or automatically migrated.
 
 ## Store and restore lifecycle
 
-A store captures the runtime-proven complete page set through fixed staging
-slots. It writes immutable content-addressed objects, fsyncs data and publishes
-an authenticated manifest only after every object has a durable receipt.
-Objects, manifests and directory links follow the maintenance lock and durable
-publication order. CUDA pointers, request IDs and allocator block IDs are not
-serialized as persistent identities.
+At the pre-forward ownership boundary, saves authenticate existing keys before
+GPU capture. Only missing/corrupt keys need D2H capture. Each borrowed staging
+credit remains owned until its copies finish and the consumer finishes writing.
+Saves remain synchronous; no queued whole-prefix payload or background GPU read
+can outlive the public page-ownership contract.
 
-Before admission, lookup validates manifest identity and object metadata. Restore
-streams payload through the fixed slots and computes SHA-256 over logical bytes,
-checking stored length and zero padding. Each object is fully authenticated in
-host staging before it is copied to request-private GPU blocks. Earlier objects
-may already be on the GPU when a later object fails; completion is withheld
-until the entire restore authenticates and CUDA completes. A later failure cannot
-be treated as a successful partial restore or silently recomputed after admission.
+Each temporary file receives its complete header/payload, then file fsync.
+Small files use one `writev`; larger files reserve the header, stream fixed-size
+payload ranges, and rewrite the completed checksum header before that same
+single file fsync. No transfer range becomes a separate file or durable key.
+Publishing a hardlink and fsyncing the shard make the key durable before it is
+advertised. Cleanup attempts both unlink and directory fsync without masking a
+primary failure. A publication failure can leave earlier independent keys
+durable; only confirmed keys enter inventory. Incomplete HMA is never a hit.
 
-The current store/restore path is synchronous at the model-runner boundary.
-Separate slots and CUDA completion events preserve transfer ownership: a slot
-cannot be overwritten while CUDA still consumes it. The production path keeps
-separate pinned and aligned-I/O pools.
+Admission requires every data key from the chain root and exact boundary state
+across every participant. Restore pins all keys under the namespace lock before
+releasing that lock. Payload reads fill bounded pinned credits, authenticate
+each transfer range's SHA-256, then copy to selected GPU pages. A range can cross
+page/layer boundaries or contain only part of a large opaque page. Full-file
+authentication and the complete restore's CUDA drain finish before
+releasing pins or reusing credits. Corruption returns a borrowed credit before
+waiting on the quarantine lock, avoiding reader/writer lock inversion.
 
-## Direct I/O and durability
+## Buffered I/O and durability
 
-Payload files always use `O_DIRECT`. Objects are padded to the implementation's
-4096-byte alignment and staging buffers are aligned. Initialization probes the
-cache root and rejects unsupported direct I/O. Short payload reads/writes fail
-instead of retrying with potentially unaligned offsets or pointers.
-
-Small manifests, SQLite state and control files use ordinary I/O. Payloads do
-not use file-backed mmap; anonymous mmap backs the bounded aligned buffers.
-`O_DIRECT` controls page-cache use, not durability. Payload fsync and parent
-directory fsync remain part of the publication protocol.
-
-Temporary cleanup attempts both unlink and directory fsync. A secondary cleanup
-failure must not replace the primary publication error. Existing directories or
-idempotent markers need a directory-fsync receipt; their existence alone does
-not prove a preceding failed publication survived a crash.
+Readv/writev use ordinary file descriptors. OS page cache is separate from the
+explicit process staging budget. No O_DIRECT, io_uring registration or compiled
+extension is used. CUDA host registration remains necessary for pinned copies.
+Durability comes from ordered file and directory fsyncs, not from I/O mode.
 
 ## Resource bounds
 
-These are implementation constants, not deployment tuning options:
-
-| Bound | Current value |
+| Resource | Bound |
 | --- | --- |
-| Pinned staging per rank | 2 × 64 MiB |
-| Separate aligned-I/O staging per rank | 2 × 64 MiB |
-| Pending restores | 2 across the complete admitted lifecycle |
-| Pending stores | 1 |
-| Cache chunk / minimum persistent span | 256 / 1,024 tokens |
-| Internal maximum span | 1,048,576 tokens; not a model-context support claim |
-| Startup inventory selection | 512 digests |
-| Report batch | 64 items |
-| Catalog bound | 100,000 entries |
-| Capacity low watermark | 90% of the configured per-rank maximum |
+| Full-KV data file | Smallest multiple of common runtime alignment >=256 tokens |
+| Data file or complete HMA state payload | At most 512 transfer ranges (32 GiB); also limited by the 64 KiB header |
+| Transfer batch | Small files: at most 16 files in one 64 MiB credit; large files: consecutive ranges of at most 64 MiB |
+| Explicit payload staging per rank | Two 64 MiB CUDA credits plus one 64 MiB CPU credit: 192 MiB |
+| Chain | No separate token/key-count, aggregate header or descriptor-memory cap; shared layout views and incremental coverage checks |
+| Inventory | 512 MiB conservative per-rank record allowance covering reporter/catalog/checkpoint/transport views; capacity derived from object sizes; 64 per periodic report |
+| In-flight admission | Two restores, one store plan, through their complete lifecycle |
+| GC | 80% trigger; 20%-of-key rounds, at most four candidates per batch |
+| Scrub | 64 MiB/s, at most 64 keys per step; 60 s startup delay, six-hour cycle |
 
-The two staging pools total about 256 MiB per rank, plus bounded metadata and
-runtime overhead. This is not a total host or model-memory limit. Capacity is
-managed asynchronously and does not reserve filesystem space. The public
-`spoolcache_max_size` setting uses GB as 1024³ bytes; its default of 200 retains
-the previous 200 GiB target. Its derived `max_bytes` property supplies whole
-bytes for the existing GC thresholds and accounting.
+Token descriptors share the runtime layout and derive page slices as consumed.
+HMA coverage uses one cursor per layer; neither path retains every file/layer
+combination. File headers remain independently authenticated. The request token
+limit comes from vLLM's runtime context, with no additional million-token ceiling.
+Active-chain metadata grows with key and transfer-checksum counts; it has no
+independent byte quota. This is separate from inventory and payload staging.
+
+Payload memory does not grow with prefix length. Page cache, metadata and model
+runtime allocations are outside the 192 MiB staging figure. Unsupported geometry
+fails startup; there is no model-specific page size or capacity preset.
 
 ## Generation, withdrawal and repair
 
-Each rank has one lifetime inventory-owner lease. Startup reserves a monotonic
-epoch in `state/generation.json` before exposing inventory. A persistent sentry
-distinguishes a new store from lost required state. Legacy raw-clock epochs
-migrate into a disjoint high domain; the state is a correctness boundary.
+Exactly one worker holds the rank's lifetime inventory-owner lease. Durable,
+strict generations and an initialization sentry prevent reuse after restart or
+clock rollback. Missing initialized state fails closed. Namespace operations
+retain their cross-process lock protocol; live restores additionally pin keys.
 
-A newer generation withdraws the prior rank image before accepting its complete
-checkpoint. Lower reports are ignored only when their exact UUID/epoch is in
-bounded observed history. Unknown lower or conflicting equal generations
-withdraw the rank.
-
-Known-bad entries receive durable withdrawal markers before quarantine renames.
-A reporter consumes those markers under the maintenance lock before publishing
-stats; an offline maintenance client does not compete for its lifetime lease.
-Catalog scan/replace and manifest publication/reporter-add use their respective
-single critical sections so stale observations cannot re-add withdrawn entries.
-
-A corrupt content-address collision fences the digest before traversing its
-references. Reference withdrawal is streamed, evidence retained, and replacement
-published durably. A failed namespace operation keeps fences/tombstones active.
-Repairing one object cannot clear every referring entry tombstone: another object
-or incomplete operation may still make that entry unsafe. Release a tombstone
-only after a complete replacement or final authentication of its full manifest.
-
-Startup selection streams validation before choosing the bounded newest healthy
-subset. Tombstones or corrupt files must not crowd healthy entries out of that
-selection window. Normalize data-driven manifest decode failures into manifest
-errors, while allowing resource exhaustion and unrelated implementation errors
-to remain real failures.
+Corrupt entries receive a durable withdrawal marker before quarantine is attempted.
+Metadata scans cannot clear it. Full replacement or complete authentication of
+that exact key can release it; all-rank contiguous admission still applies.
+Before sending inventory, the reporter streams actual withdrawal markers and
+removes every marked key from its held image. This avoids probing every healthy
+key when the marker namespace is empty. Marker acknowledgements use bounded,
+cursor-driven pages, including offline markers outside the held image.
+Absence is directory-fsynced before a marker is
+acknowledged. Parent-directory receipts are retried even for existing state.
 
 ## Scrub and reclamation
 
-Scrub persists namespace work queues, live references and completed-object
-progress in SQLite. Cycle start records state without scanning the whole tree.
-Snapshot phases stream fixed batches, allow cancellation between items and use
-idempotent inserts when an interrupted phase is rescanned. Partial hashes are
-not trusted after restart.
+Scrub persists one lexical key cursor only after complete payload authentication.
+Concurrent state/target changes are rechecked under the rank lock. Pinned keys
+are deferred; new keys behind the cursor are visited next cycle. There is no
+SQLite work queue or shared-object reference scan. Unexpected scrub failure
+withdraws inventory until reconciliation; shutdown retains resources until any
+timed-out reader exits.
 
-Authentication binds the rank identity before payload reads and checks regular
-file type, logical/stored length, SHA-256 and zero padding. Quarantine withdraws
-all affected offers. An orphan is deleted only after a complete manifest pass
-and a final live-reference recheck under the maintenance lock.
+GC uses file mtime as its sole LRU source, including after process reopen.
+Metadata inspection does not refresh it. Reverse batch touches favor earlier
+prefix keys; equal-mtime candidates are ordered by key. Pins are skipped. There
+is no fixed stop watermark and a 20% key quota does not imply 20% of bytes.
+Directory rescans remain a scaling cost. Deleting an intermediate key makes
+later chains miss; it does not fabricate missing HMA boundary state.
 
-Capacity pressure first reclaims proven crash orphans, then healthy LRU manifests.
-Maintenance treats unknown managed paths and links as quarantine candidates,
-not destinations to follow. Inventory inspection does not refresh recency.
-See [Operations](OPERATIONS.md) for scheduling, status and recovery procedures.
+Startup recovery removes only recognized abandoned token temporaries under the
+rank lock. Quarantine/control bytes are accounted separately and are not silently
+deleted to satisfy a capacity target. See [Operations](OPERATIONS.md).
 
 ## Failure boundaries
 
@@ -258,24 +267,15 @@ participants can serve.
 
 ## Configuration, compatibility and exclusions
 
-The two public settings are described in [Configuration](CONFIGURATION.md).
-Configuring the connector enables both persistent reads and writes; no access
-mode gates startup checks, worker registration, restore admission or store plans.
-The request flag `spoolcache.skip_read=true` skips persistent restore admission;
-`spoolcache.skip_write=true` suppresses store tracking. They are independent and
-only literal JSON booleans activate them. Neither changes runtime compatibility,
-background maintenance, or vLLM's own caches.
-`spoolcache_path` defaults to the current user's `~/.cache/spoolcache`; old
-root and I/O-mode settings are covered in the [migration guide](MIGRATION.md).
+`spoolcache config` emits the only connector entry point. Public settings are
+path and capacity; request flags independently skip persistent reads/writes.
+The old snapshot maintenance CLI and experimental connector alias are removed.
+Model/runtime identity, topology and geometry are automatic; no backend selector
+or model preset is accepted.
 
-The persistent schema names remain `spoolcache-manifest/v1`,
-`spoolcache-manifest-envelope/v1`, `spoolcache-deployment/v2` and
-`spoolcache-coordination/v2`. A schema name does not promise cache hits across
-changed model/runtime/package/topology identities. Keep complete rank state
-for rollback; do not rename data into another identity.
-
-No asynchronous store, layerwise restore, shared staging pool, compression,
-encoder cache, cross-node replication, GDS/RDMA payload path, Redis/S3 backend
-or model selector is shipped. A shared-pool probe is feasibility evidence only.
-New optimizations require a measured need and one qualified ownership path;
-see [Goals](TODO_GOALS.md).
+Python 3.11+ uses a pure-Python wheel. Serving still needs 64-bit Linux OFD locks,
+CUDA and admitted vLLM contracts. Artifact authentication and installed-runtime
+tests remain required. The [Gemma multimodal receipt](receipts/2026-09-11-token-files/README.md)
+qualifies cache equivalence on `9061441`, TP=1/PP=1, with its mixed-recognition
+limit. PP>1, maximum-context and sustained GC qualification remain separate
+from host contracts and earlier model receipts.

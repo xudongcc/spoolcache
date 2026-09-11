@@ -117,11 +117,11 @@ with a narrow backup and exact recovery receipt. Never clear a whole cache root
 as setup or cleanup. Confirm the entry's deployment/rank/layout/topology and
 full payload before touching a byte.
 
-Select one uniquely referenced object from the exact rank manifest. Check regular
-file type, lengths, hash and padding; back up that object and manifest, fsync the
-backups and their directory, then independently authenticate the backup. Perform
-the mutation under the rank maintenance lock, without changing another entry
-or its manifest. Keep a fixed external client deadline for every fault request.
+Select one authenticated key file from the complete rank prefix. Record every
+known prefix that depends on that key: a shared prefix file can affect multiple
+entries. Check its header, identity, lengths and payload hash; back up the entire
+file, fsync the backup and its directory, then independently authenticate it.
+Perform the mutation under the rank maintenance lock. Keep a fixed external client deadline for every fault request.
 If backup integrity, old-rank shutdown or recovery timing is uncertain, stop and
 preserve the evidence. A stopped experiment must not leave a known corrupt object
 advertised by a running group.
@@ -129,9 +129,10 @@ advertised by a running group.
 For pre-admission scrub:
 
 1. Flip one byte in the selected authenticated object and fsync it.
-2. Request that exact entry through `spoolcache request` and wait for its durable
-   `quarantined` result and bounded quarantine metrics.
-3. Wait for scheduler quorum withdrawal. If idle, use an unrelated skip-write request
+2. In the controlled harness, request the exact key through an identity-bound
+   `TokenFileScrubber`; wait for completed work, durable withdrawal and bounded
+   quarantine metrics. The retired `spoolcache request/status` CLI is unavailable.
+3. Wait for scheduler quorum withdrawal. If idle, use an unrelated skip-read/skip-write request
    as a stats-transport barrier, not the affected prompt.
 4. Restart the whole group to remove GPU cache state and require an external miss,
    zero cached tokens and the established output oracle.

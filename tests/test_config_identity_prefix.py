@@ -47,7 +47,8 @@ class ConfigIdentityPrefixTests(unittest.TestCase):
     def test_strict_config(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config = self._config(Path(directory))
-            self.assertEqual(config.low_watermark_bytes, 180 * 1024**3)
+            self.assertEqual(config.trigger_watermark_bytes, 160 * 1024**3)
+            self.assertFalse(hasattr(config, "low_watermark_bytes"))
             with self.assertRaisesRegex(ConfigurationError, "unknown"):
                 self._config(Path(directory), surprise=True)
             for removed in (
@@ -81,13 +82,13 @@ class ConfigIdentityPrefixTests(unittest.TestCase):
                     with self.assertRaisesRegex(ConfigurationError, "unknown"):
                         self._config(Path(directory), **{removed: "removed"})
 
-    def test_low_watermark_is_a_bounded_internal_default(self) -> None:
+    def test_trigger_rounds_up_to_the_first_byte_at_eighty_percent(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             config = self._config(
                 Path(directory),
                 spoolcache_max_size=10_001 / 1024**3,
             )
-            self.assertEqual(config.low_watermark_bytes, 9_000)
+            self.assertEqual(config.trigger_watermark_bytes, 8_001)
             with self.assertRaisesRegex(ConfigurationError, "at least 2"):
                 self._config(Path(directory), spoolcache_max_size=1 / 1024**3)
 
@@ -105,7 +106,14 @@ class ConfigIdentityPrefixTests(unittest.TestCase):
                     self.assertEqual(config.max_size, size)
                     self.assertEqual(config.max_bytes, expected)
                     self.assertIs(type(config.max_bytes), int)
-                    self.assertEqual(config.low_watermark_bytes, expected * 9 // 10)
+
+    def test_trigger_remains_valid_at_tiny_capacities(self) -> None:
+        for capacity, trigger in ((2, 2), (3, 3), (4, 4), (5, 4), (100, 80)):
+            with self.subTest(capacity=capacity):
+                config = SpoolCacheConfig(max_size=capacity / 1024**3)
+                self.assertEqual(config.trigger_watermark_bytes, trigger)
+                self.assertGreater(trigger, 0)
+                self.assertLessEqual(trigger, config.max_bytes)
 
     def test_capacity_rejects_invalid_types_values_and_duplicate_aliases(self) -> None:
         for value in (True, False, "200", None, [], {}, float("nan"),
@@ -286,12 +294,12 @@ class ConfigIdentityPrefixTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "token IDs"):
             prefix_digests(
                 [*range(256), "bad"],  # type: ignore[list-item]
-                deployment_digest="d" * 64,
+                deployment_digest="d" * 64, chunk_tokens=256,
             )
 
     def test_prefix_keys_do_not_reuse_legacy_namespace_encoding(self) -> None:
         tokens = list(range(256))
-        current = prefix_digests(tokens, deployment_digest="d" * 64, cache_salt="salt")
+        current = prefix_digests(tokens, deployment_digest="d" * 64, cache_salt="salt", chunk_tokens=256)
         for namespace in (b"", b"default", b"tenant-a"):
             with self.subTest(namespace=namespace):
                 legacy_seed = hashlib.sha256(
@@ -377,6 +385,7 @@ class ConfigIdentityPrefixTests(unittest.TestCase):
             prefix_digests(
                 list(range(256)),
                 deployment_digest="f" * 64,
+                chunk_tokens=256,
                 multimodal_features=(
                     MultimodalFeatureIdentity("image", "sha256:image", 200, 80),
                 ),

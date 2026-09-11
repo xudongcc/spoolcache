@@ -6,7 +6,7 @@ vLLM connector, with fixed staging buffers and no changes to vLLM's source.
 
 - Exact text and multimodal prefix identity, derived from the serving runtime.
 - Complete cache-group and PP/TP participant agreement before a persistent hit.
-- Mandatory `O_DIRECT` for KV payloads; authenticated, immutable disk objects.
+- Runtime-aligned chained token files, buffered I/O and authenticated durable publication.
 - Bounded inventory, capacity reclamation, background integrity checks and metrics.
 
 SpoolCache is experimental. Runtime support is determined by public-interface
@@ -27,8 +27,11 @@ python -m pip install --upgrade spoolcache
 spoolcache --help
 ```
 
-Python 3.10+ is required. Serving additionally requires Linux, a working
-CUDA/vLLM runtime and storage supporting SpoolCache's aligned `O_DIRECT` I/O.
+Python 3.11+ is required. Serving additionally requires 64-bit Linux OFD file
+locks and a working CUDA/vLLM runtime. The sole storage backend uses ordinary
+buffered I/O, with no O_DIRECT or io_uring extension. The token-file backend
+replaces the snapshot format used in 0.2.0; see the
+[migration guide](docs/MIGRATION.md).
 The package does not install vLLM, PyTorch, CUDA or model weights.
 Production images use a verified wheel; see [deployment](docs/DEPLOYMENT.md).
 
@@ -59,6 +62,9 @@ to false and leave vLLM's own caches enabled. See [request controls](docs/CONFIG
 
 ## Configure
 
+The default connector uses the [token-file backend](docs/TOKEN_FILES.md).
+Earlier snapshot/slot cache formats remain on disk but are not read or migrated.
+
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `SPOOLCACHE_PATH` | `~/.cache/spoolcache` | Cache directory visible to the process; `~` is expanded. |
@@ -74,17 +80,10 @@ path. See [container paths](docs/DEPLOYMENT.md#container-paths).
 
 ## Operate
 
-Inspect or request an integrity check for one owned rank directory:
-
-```bash
-spoolcache status --root /absolute/cache/deployment-digest/rank-0000
-spoolcache request --root /absolute/cache/deployment-digest/rank-0000 \
-  --entry 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-```
-
-`request` queues work for the running worker's scrubber. Metrics appear on
-vLLM's `/metrics` endpoint. Capacity reclamation and integrity checks run in the
-worker; the deployment owns process restarts and complete-group recovery.
+The worker runs bounded integrity checks and capacity reclamation. Metrics
+appear on vLLM's `/metrics` endpoint; deployment owns process restarts and
+complete-group recovery. The CLI exposes `spoolcache config`; the old snapshot
+`request` and `status` commands are removed.
 Read the [operations guide](docs/OPERATIONS.md) before manipulating cache state.
 
 ## Develop
@@ -96,8 +95,8 @@ uv sync --python 3.12 --locked --group dev
 uv run --locked pytest -q
 ```
 
-CPU storage tests use real `O_DIRECT`; a GPU is unnecessary. Set `TMPDIR` to a
-supported filesystem when needed. GPU/runtime tests require their target image.
+CPU storage tests use the real buffered token-file path and Linux file locks;
+a GPU is unnecessary. GPU/runtime tests require their target image.
 The [development guide](docs/DEVELOPMENT.md) covers wheel builds, containers,
 multimodal checks and the isolated two-node harness.
 

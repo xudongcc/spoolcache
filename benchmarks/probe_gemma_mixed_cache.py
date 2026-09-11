@@ -18,7 +18,7 @@ import uuid
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from benchmarks import bench_multimodal_prefix_e2e as client
-from benchmarks.gemma_e2e_evidence import Evidence
+from benchmarks.token_file_evidence import TokenFileEvidence as Evidence
 from benchmarks.reset_gpu_prefix_cache import reset_gpu_prefix_cache, reset_multimodal_caches
 from benchmarks.run_gemma_e2e import MEDIA, MODEL, REVISION, check_sample, write_json
 

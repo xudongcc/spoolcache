@@ -1,21 +1,22 @@
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import hashlib
-import tempfile
 import types
 import unittest
-from pathlib import Path
 from unittest import mock
 
-from spoolcache.errors import FatalRestoreError, LayoutError
+from spoolcache.errors import LayoutError
 from spoolcache.gpu import (
     TorchPageMover,
+    PinnedTensorPool,
+    _PinnedSlot,
     bind_group_owned_kv_caches,
     manager_page_view,
 )
 from spoolcache.hma import build_hma_layout as _build_hma_layout
-from spoolcache.store import ManifestStore
+from spoolcache.manifest import PageSlice
 
 try:
     import torch
@@ -148,6 +149,159 @@ class RegisteredKVCacheOwnershipTests(unittest.TestCase):
 
 @unittest.skipIf(torch is None or not torch.cuda.is_available(), "CUDA Torch required")
 class TorchPageMoverTests(unittest.TestCase):
+    def test_restore_dense_targets_avoid_temporary_scatter_and_preserve_other_pages(self):
+        layout, _, mover = self._mover()
+        layer = layout.groups[0].layers[0]
+        bound = mover._bound[(0, layer.name)]
+        payload = bytes(range(3 * layer.page_size_bytes))
+        descriptor = types.SimpleNamespace(byte_length=len(payload), segments=(
+            PageSlice(0, layer.name, 0, 3, len(payload)),))
+        stream = torch.cuda.current_stream()
+        original_copy = torch.Tensor.index_copy_
+        backing = torch.full((*bound.pages.shape[:-1], bound.pages.shape[-1]*2), 255,
+                             dtype=torch.uint8, device=bound.pages.device)
+        strided = backing[..., ::2]
+        for target_pages, pages, scatters in ((bound.pages, (1, 2, 3), 0),
+                (bound.pages, (1, 3, 5), 1), (bound.pages, (5, 3, 1), 1),
+                (strided, (1, 2, 3), 1)):
+            mover._bound[(0, layer.name)] = dataclasses.replace(bound, pages=target_pages)
+            calls = []
+
+            def copy(tensor, *args, **kwargs):
+                calls.append(True)
+                return original_copy(tensor, *args, **kwargs)
+
+            target_pages.fill_(255)
+            with self.subTest(pages=pages), mover._pool.acquire() as slot:
+                with slot.view[:len(payload)] as view:
+                    view[:] = payload
+                    with mock.patch.object(torch.Tensor, 'index_copy_', new=copy):
+                        with mover._restore_object_receiver(descriptor, (pages,), stream=stream) as receive:
+                            receive(view)
+                    slot.record_use(stream)
+                    slot.wait_until_reusable()
+                self.assertEqual(len(calls), scatters)
+            expected = bytearray([255]) * bound.pages.numel()
+            for index, page in enumerate(pages):
+                start = index * layer.page_size_bytes
+                expected[page*layer.page_size_bytes:(page+1)*layer.page_size_bytes] = payload[start:start+layer.page_size_bytes]
+            self.assertEqual(target_pages.cpu().numpy().tobytes(), expected)
+        self.assertTrue(bool((backing[..., 1::2] == 255).all()))
+
+    def test_capture_contiguous_view_and_noncontiguous_gather_have_same_bytes(self):
+        layout, _, mover = self._mover()
+        layer = layout.groups[0].layers[0]
+        bound = mover._bound[(0, layer.name)]
+        segments = (PageSlice(0, layer.name, 0, 3, 3 * layer.page_size_bytes),)
+        for pages, gathers in (((1, 2, 3), 0), ((1, 3, 5), 1), ((5, 3, 1), 1)):
+            expected = bound.pages[list(pages)].cpu().numpy().tobytes()
+            with self.subTest(pages=pages), mock.patch.object(
+                    torch, 'index_select', wraps=torch.index_select) as select:
+                with contextlib.closing(mover._capture_packed(segments, (pages,))) as source:
+                    self.assertEqual(bytes(next(source)), expected)
+                self.assertEqual(select.call_count, gathers)
+        # Consecutive page IDs do not prove a dense storage view. A strided
+        # opaque page tensor must keep the gather and produce the same bytes.
+        backing = torch.empty((*bound.pages.shape[:-1], bound.pages.shape[-1] * 2),
+                              dtype=torch.uint8, device=bound.pages.device)
+        strided = backing[..., ::2]
+        strided.copy_(bound.pages)
+        mover._bound[(0, layer.name)] = dataclasses.replace(bound, pages=strided)
+        with mock.patch.object(torch, 'index_select', wraps=torch.index_select) as select:
+            with contextlib.closing(mover._capture_packed(segments, ((1, 2, 3),))) as source:
+                self.assertEqual(bytes(next(source)), bound.pages[1:4].cpu().numpy().tobytes())
+            self.assertEqual(select.call_count, 1)
+
+    def test_failed_cuda_event_prevents_reuse_until_terminal_drain(self):
+        pool = PinnedTensorPool(slot_bytes=4096, slot_count=1)
+        self.addCleanup(pool.close)
+        with pool.acquire() as slot:
+            slot.completion_event = types.SimpleNamespace(
+                record=mock.Mock(side_effect=RuntimeError('injected event failure')))
+            with self.assertRaisesRegex(RuntimeError, 'event failure'):
+                slot.record_use(None)
+        with self.assertRaisesRegex(RuntimeError, 'terminal drain'):
+            with pool.acquire():
+                self.fail('unsafe credit reuse')
+        self.assertEqual(pool.borrowed, 0)
+        # The injected fixture enqueues no GPU work; production synchronizes
+        # its real current stream before clearing the ownership failure.
+        pool.mark_stream_synchronized()
+        with pool.acquire():
+            pass
+
+    def test_registered_pool_is_aligned_and_drains_before_unregister(self):
+        pool = PinnedTensorPool(slot_bytes=4096, slot_count=2)
+        events = []
+        with pool.acquire() as slot:
+            self.assertTrue(slot.tensor.is_pinned())
+            self.assertEqual(slot.tensor.data_ptr() % 4096, 0)
+            self.assertEqual(pool.budget_bytes, 8192)
+            slot.completion_event = types.SimpleNamespace(
+                record=lambda _: events.append('record'),
+                synchronize=lambda: events.append('drain'),
+            )
+            slot.record_use(None)
+            mapping = slot.mapping._mapping
+            with self.assertRaisesRegex(RuntimeError, 'borrowed'):
+                pool.close()
+        pool.close()
+        self.assertEqual(events, ['record', 'drain'])
+        self.assertTrue(mapping.closed)
+
+    def test_packed_capture_waits_once_and_drains_a_mid_pack_failure(self) -> None:
+        layout, _, mover = self._mover()
+        tables = tuple(tuple(range(1, count + 1)) for count in (1, 4, 4, 64, 32))
+        selected = layout.select_physical_pages(tables, 256)
+        segments = tuple(
+            PageSlice(group.group_index, layer.name, 0, len(pages),
+                      len(pages) * layer.page_size_bytes)
+            for group, pages in zip(layout.groups, selected)
+            if group.reuse_policy == 'full'
+            for layer in group.layers
+        )
+        self.assertGreater(len(segments), 1)
+        records = []
+        original_record = _PinnedSlot.record_use
+
+        def record(slot, stream):
+            records.append(slot.index)
+            return original_record(slot, stream)
+
+        with mock.patch.object(_PinnedSlot, "record_use", new=record):
+            source = mover._capture_packed(segments, selected)
+            payload = bytes(next(source))
+            self.assertEqual(len(records), 1)
+            self.assertTrue(all(not slot.pending for slot in mover._pool._slots))
+            source.close()
+        expected = b"".join(
+            mover._bound[(s.group_index, s.layer_name)].pages[
+                list(selected[s.group_index][s.page_start:s.page_start+s.page_count])
+            ].cpu().numpy().tobytes() for s in segments
+        )
+        self.assertEqual(payload, expected)
+
+        records.clear()
+        original_copy = torch.Tensor.copy_
+        calls = []
+
+        def fail_second(*args, **kwargs):
+            calls.append(True)
+            if len(calls) == 2:
+                raise RuntimeError("injected mid-capture failure")
+            return original_copy(*args, **kwargs)
+
+        with (
+            mock.patch.object(torch.Tensor, "copy_", new=fail_second),
+            mock.patch.object(_PinnedSlot, "record_use", new=record),
+            self.assertRaisesRegex(RuntimeError, "mid-capture"),
+        ):
+            next(mover._capture_packed(segments, selected))
+        self.assertEqual(len(records), 1)
+        self.assertEqual(mover._pool.borrowed, 0)
+        self.assertTrue(all(not slot.pending for slot in mover._pool._slots))
+        mover.close()
+
     def _mover(self):
         config = cache_config()
         layout = build_hma_layout(config)
@@ -170,6 +324,7 @@ class TorchPageMoverTests(unittest.TestCase):
             slot_bytes=4096,
             slot_count=2,
         )
+        self.addCleanup(mover.close)
         return layout, caches, mover
 
     def test_manager_view_includes_split_rows_and_physical_tail(self) -> None:
@@ -236,226 +391,10 @@ class TorchPageMoverTests(unittest.TestCase):
         resized.close()
         padded.close()
 
-    def test_all_groups_round_trip_through_manifest_store(self) -> None:
-        layout, caches, mover = self._mover()
-        boundary_counts = (1, 4, 4, 64, 32)
-        tables = tuple(
-            tuple(range(1, count + 1)) for count in boundary_counts
-        )
-        selected = layout.select_physical_pages(tables, 256)
-        expected = {
-            (group.group_index, layer.name): mover._bound[
-                (group.group_index, layer.name)
-            ].pages[list(selected[group.group_index])].clone()
-            for group in layout.groups
-            for layer in group.layers
-        }
-        with tempfile.TemporaryDirectory() as directory:
-            with ManifestStore(
-                Path(directory) / "cache",
-                slot_bytes=4096,
-                slot_count=1,
-                expected_deployment_digest="a" * 64,
-                expected_rank_digest="b" * 64,
-                expected_rank=0,
-            ) as store:
-                manifest = mover.commit(
-                    store,
-                    entry_id=entry_id("round-trip"),
-                    deployment_identity_digest="a" * 64,
-                    rank_identity_digest="b" * 64,
-                    span_tokens=256,
-                    physical_rank=0,
-                    topology_digest="c" * 64,
-                    block_tables=tables,
-                    created_at_unix_ns=1,
-                )
-                layout.validate_manifest_coverage(manifest)
-                for group in layout.groups:
-                    indexes = torch.tensor(
-                        selected[group.group_index],
-                        dtype=torch.long,
-                        device="cuda",
-                    )
-                    for layer in group.layers:
-                        mover._bound[(group.group_index, layer.name)].pages.index_fill_(
-                            0, indexes, 0
-                        )
-                acquired_slots: list[int] = []
-                original_acquire = mover._pool.acquire
 
-                @contextlib.contextmanager
-                def tracked_acquire(*, block: bool = False, timeout=None):
-                    with original_acquire(block=block, timeout=timeout) as slot:
-                        acquired_slots.append(slot.index)
-                        yield slot
 
-                with (
-                    mock.patch.object(
-                        mover._pool,
-                        "acquire",
-                        new=tracked_acquire,
-                    ),
-                    mock.patch.object(
-                        mover,
-                        "_synchronize_restore_stream",
-                        wraps=mover._synchronize_restore_stream,
-                    ) as synchronize,
-                ):
-                    mover.restore_entry(
-                        store,
-                        entry_id=manifest.entry_id,
-                        span_tokens=256,
-                        block_tables=tables,
-                    )
-                self.assertEqual(synchronize.call_count, 1)
-                self.assertGreater(len(acquired_slots), 2)
-                self.assertTrue(
-                    all(
-                        first != second
-                        for first, second in zip(
-                            acquired_slots,
-                            acquired_slots[1:],
-                            strict=False,
-                        )
-                    )
-                )
-                self.assertTrue(
-                    all(not slot.pending for slot in mover._pool._slots)
-                )
-                for key, wanted in expected.items():
-                    group_index, layer_name = key
-                    actual = mover._bound[key].pages[
-                        list(selected[group_index])
-                    ]
-                    self.assertTrue(torch.equal(actual, wanted), layer_name)
-        mover.close()
 
-    def test_corruption_fails_before_any_gpu_page_is_placed(self) -> None:
-        layout, _, mover = self._mover()
-        tables = tuple(
-            tuple(range(1, count + 1)) for count in (1, 4, 4, 64, 32)
-        )
-        selected = layout.select_physical_pages(tables, 256)
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "cache"
-            with ManifestStore(
-                root,
-                slot_bytes=4096,
-                slot_count=1,
-                expected_deployment_digest="a" * 64,
-                expected_rank_digest="b" * 64,
-                expected_rank=0,
-            ) as store:
-                manifest = mover.commit(
-                    store,
-                    entry_id=entry_id("corrupt"),
-                    deployment_identity_digest="a" * 64,
-                    rank_identity_digest="b" * 64,
-                    span_tokens=256,
-                    physical_rank=0,
-                    topology_digest="c" * 64,
-                    block_tables=tables,
-                    created_at_unix_ns=1,
-                )
-                first = root / manifest.objects[0].relative_path
-                with first.open("r+b") as handle:
-                    original = handle.read(1)
-                    handle.seek(0)
-                    handle.write(bytes((original[0] ^ 0xFF,)))
-                for group in layout.groups:
-                    indexes = torch.tensor(
-                        selected[group.group_index],
-                        dtype=torch.long,
-                        device="cuda",
-                    )
-                    for layer in group.layers:
-                        mover._bound[(group.group_index, layer.name)].pages.index_fill_(
-                            0, indexes, 0
-                        )
-                with self.assertRaisesRegex(
-                    FatalRestoreError, "POST_ADMISSION_RESTORE_FAILED"
-                ):
-                    mover.restore_entry(
-                        store,
-                        entry_id=manifest.entry_id,
-                        span_tokens=256,
-                        block_tables=tables,
-                    )
-                for group in layout.groups:
-                    for layer in group.layers:
-                        actual = mover._bound[
-                            (group.group_index, layer.name)
-                        ].pages[list(selected[group.group_index])]
-                        self.assertEqual(int(actual.count_nonzero()), 0)
-        mover.close()
 
-    def test_late_corruption_drains_submitted_cuda_work(self) -> None:
-        """A late disk failure must not leave pinned slots owned by CUDA.
-
-        This is deliberately different from the first-object corruption test:
-        several valid objects are allowed to reach request-private GPU pages
-        before the final object fails authentication.  The engine treats that
-        partial restore as fatal, but the mover must still execute its terminal
-        barrier so its fixed staging pool is safe to close or reuse.
-        """
-
-        layout, _, mover = self._mover()
-        tables = tuple(
-            tuple(range(1, count + 1)) for count in (1, 4, 4, 64, 32)
-        )
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "cache"
-            with ManifestStore(
-                root,
-                slot_bytes=4096,
-                slot_count=1,
-                expected_deployment_digest="a" * 64,
-                expected_rank_digest="b" * 64,
-                expected_rank=0,
-            ) as store:
-                manifest = mover.commit(
-                    store,
-                    entry_id=entry_id("late-corrupt"),
-                    deployment_identity_digest="a" * 64,
-                    rank_identity_digest="b" * 64,
-                    span_tokens=256,
-                    physical_rank=0,
-                    topology_digest="c" * 64,
-                    block_tables=tables,
-                    created_at_unix_ns=1,
-                )
-                # Damage the last object so earlier H2D/scatter work has
-                # definitely been queued when authentication fails.
-                last = root / manifest.objects[-1].relative_path
-                with last.open("r+b") as handle:
-                    original = handle.read(1)
-                    handle.seek(0)
-                    handle.write(bytes((original[0] ^ 0xFF,)))
-
-                with (
-                    mock.patch.object(
-                        mover,
-                        "_synchronize_restore_stream",
-                        wraps=mover._synchronize_restore_stream,
-                    ) as synchronize,
-                    self.assertRaisesRegex(
-                        FatalRestoreError,
-                        "POST_ADMISSION_RESTORE_FAILED",
-                    ),
-                ):
-                    mover.restore_entry(
-                        store,
-                        entry_id=manifest.entry_id,
-                        span_tokens=256,
-                        block_tables=tables,
-                    )
-
-                self.assertEqual(synchronize.call_count, 1)
-                self.assertTrue(
-                    all(not slot.pending for slot in mover._pool._slots)
-                )
-        mover.close()
 
 
 if __name__ == "__main__":

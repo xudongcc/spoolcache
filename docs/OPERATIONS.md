@@ -8,7 +8,7 @@ SPOOLCACHE_PATH/
     rank-0000/
       .spoolcache-root
       manifests/
-      objects/
+      objects/       # empty reserved directory; no separate payload backend
       state/
       tmp/
       quarantine/
@@ -20,60 +20,42 @@ payloads or remove generation state to force a startup to succeed.
 
 ## Inspect progress
 
-The installed `spoolcache` command exposes `status` and `request`. It is a
-maintenance client; the worker performs the background work.
-
-```bash
-spoolcache status --root /absolute/cache/deployment-digest/rank-0000
-```
-
-`--root` names one existing owned **rank directory**, not the top-level
-`SPOOLCACHE_PATH`. It must be absolute, canonical and non-symlinked. The command
-reads SQLite state without modifying it. `initialized: false` means the scrub
-state database has not been initialized; it is not a full cache-health verdict.
-
-## Request an integrity check
-
-```bash
-spoolcache request --root /absolute/cache/deployment-digest/rank-0000 \
-  --entry 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-```
-
-The entry ID must be a 64-character lowercase hexadecimal digest. The command
-persists a targeted request and returns a nonce. Repeating the same pending
-entry is idempotent; a different pending request must complete first.
-
-A queued request does not prove authentication has finished. Poll `status` for
-that entry's outcome: `authenticated`, `absent` or `quarantined`. The running
-worker's scheduled scrubber must be present to process the request.
+Use vLLM's `/metrics` endpoint and the worker logs. The worker persists a bounded
+`state/token-scrub.json` cursor, but reading that file alone is not a cache-health
+verdict. The CLI exposes `spoolcache config`; old snapshot `status` and `request`
+commands are removed. Targeted checks in qualification use the token scrubber
+against an already identity-bound store.
 
 A rank-local quarantine receipt is not yet a scheduler receipt. Worker inventory
-changes travel through vLLM's stats channel after an iteration. Wait for quorum
-withdrawal before replaying a known-bad entry. In an isolated test, an unrelated
-small request with `spoolcache.skip_write=true` can provide the reporting iteration;
-never use the affected prompt as that barrier.
+changes travel through vLLM's stats channel after an iteration. In an isolated
+test, an unrelated request with both `spoolcache.skip_read=true` and
+`spoolcache.skip_write=true` can provide that
+reporting iteration before replaying an affected entry.
 
 ## Background maintenance
 
-Workers run a rank-local scrubber with fixed internal bounds:
-64 MiB/s, at most 64 work items per step, a 60-second initial delay for a new
-store and a six-hour cycle interval. Durable SQLite work tables track namespace
-snapshots, live references and progress at complete-object boundaries.
+Each file contains an authenticated header and exactly one payload. Full-KV
+files cover the smallest multiple of the common reusable-group alignment that
+is at least 256 tokens; mixed HMA additionally needs a complete boundary-state
+file. Larger files stream through fixed-size buffers. There are no separate
+payload objects or SQLite reference/index tables.
 
-Scrub validates identity, file type, stored and logical lengths, SHA-256 and
-zero padding. Known-bad objects and referring manifests are withdrawn and
-quarantined. Startup inventory alone is metadata validation; payloads are fully
-authenticated during restore or scrub.
+Workers scrub at 64 MiB/s, at most 64 keys per step, with a 60-second initial
+delay and six-hour cycle interval. Durable progress advances only after a whole
+file is checked. Identity, file type, exact length and SHA-256 are authenticated.
+Scrub skips active keys, quarantines corruption and reconciles worker inventory.
+Metadata-only startup scanning does not authenticate payload bytes.
 
-Capacity maintenance reclaims proven crash orphans before evicting healthy LRU
-entries. It works toward 90% of `SPOOLCACHE_MAX_SIZE`. Monitor both live-cache
-usage and total managed/control/quarantine storage: the setting is not a hard
-filesystem quota. Do not delete unknown files or quarantine evidence automatically.
+Capacity collection starts at 80% of `SPOOLCACHE_MAX_SIZE`. A round attempts
+20% of keys, at most four per batch, using file-mtime LRU and skipping pins.
+There is no fixed stop watermark. Reverse touches favor earlier prefix files;
+deleting an intermediate key makes longer chains miss. Repeated directory scans
+remain a scaling cost. The limit is not a hard filesystem quota: control state,
+temporary writes and quarantine need additional space.
 
-Shutdown requests scrub cancellation and waits up to five seconds. A timeout
-produces a structured `spoolcache-scrub-shutdown/v1` receipt; a daemon finalizer
-retains resources until the reader exits. A timeout receipt does not mean the
-background I/O operation completed successfully.
+Shutdown cancels scrub and waits up to five seconds. A timeout returns a
+`spoolcache-scrub-shutdown/v1` receipt; a daemon finalizer retains resources
+until the reader exits. The timeout does not certify that I/O completed.
 
 ## Metrics
 
@@ -96,7 +78,7 @@ metric definitions, inspect [telemetry.py](../src/spoolcache/telemetry.py) and
 
 | Observation | Meaning and response |
 | --- | --- |
-| `O_DIRECT` unavailable at initialization | Choose a supported filesystem/mount. Payload fallback is intentionally absent. |
+| File-lock or filesystem initialization error | Use a supported local Linux filesystem and preserve the rejected root for inspection. |
 | Runtime compatibility or layout startup error | Inspect the rejected public contract and qualify the runtime. Do not bypass the gate. |
 | Persistent miss | Check exact prefix, identity, span/boundary eligibility and all-rank inventory. A miss is safe. |
 | Store skipped or failed | Publication was not completed; inference may continue without that new entry. Inspect storage/admission metrics. |

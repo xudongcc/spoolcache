@@ -19,7 +19,7 @@ import uuid
 # Also support direct invocation without putting the package source on PYTHONPATH.
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from benchmarks.gemma_e2e_evidence import Evidence
+from benchmarks.token_file_evidence import TokenFileEvidence as Evidence
 
 MODEL = "google/gemma-4-E2B-it"
 REVISION = "3e22461f65e89153144f8adb70e3b8c2cc9845a7"

@@ -22,6 +22,10 @@ recorded artifacts, not automatically to later releases or source edits.
 | Upgrade from the previous interface | [Migration](MIGRATION.md) |
 | Check completed and remaining work | [Goals](TODO_GOALS.md) |
 
+The [token-file guide](TOKEN_FILES.md) documents the standard connector's
+storage format and limits. Superseded design discussions
+and experiment tooling are indexed in the performance notes and local backup.
+
 ## Evidence
 
 [Performance notes](PERFORMANCE_IMPLEMENTATION_NOTES.md) index the engineering

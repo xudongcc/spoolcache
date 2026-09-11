@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import unittest
 
+from spoolcache.config import INVENTORY_ENTRY_BYTES, INVENTORY_MEMORY_BYTES, inventory_capacity
 from spoolcache.quorum import (
     InventoryCheckpoint,
     InventoryDelta,
@@ -14,6 +15,12 @@ from spoolcache.quorum import (
 
 def key(label: str) -> str:
     return hashlib.sha256(label.encode()).hexdigest()
+
+
+def fixture_bytes(entries):
+    if type(entries) is not int or entries <= 0:
+        raise ValueError("invalid test capacity")
+    return entries * INVENTORY_ENTRY_BYTES
 
 
 def reporter(
@@ -28,7 +35,7 @@ def reporter(
         rank=rank,
         generation=generation,
         generation_epoch=generation_epoch,
-        max_entries=max_entries,
+        max_bytes=fixture_bytes(max_entries),
         max_report_entries=max_report_entries,
     )
 
@@ -38,12 +45,44 @@ def catalog(
 ) -> QuorumCatalog:
     return QuorumCatalog(
         expected_ranks=expected_ranks,
-        max_entries=max_entries,
+        max_bytes=fixture_bytes(max_entries),
         max_report_entries=max_report_entries,
     )
 
 
 class QuorumTests(unittest.TestCase):
+    def test_more_than_100000_keys_survive_complete_startup(self):
+        count = 100_001
+        entries = {f"{i:064x}": (i + 1) * 256 for i in range(count)}
+        worker = InventoryReporter(
+            rank=0, generation="large", generation_epoch=1,
+            max_bytes=INVENTORY_MEMORY_BYTES, max_report_entries=64,
+        )
+        worker.replace(entries)
+        startup = worker.startup()
+        self.assertEqual(len(startup), count)
+        scheduler = QuorumCatalog(
+            expected_ranks=(0,), max_bytes=INVENTORY_MEMORY_BYTES,
+            max_report_entries=64,
+        )
+        scheduler.apply_startup(rank=0, generation="large", generation_epoch=1,
+                                entries=startup)
+        self.assertEqual(scheduler.quorum_count, count)
+        self.assertTrue(scheduler.has_quorum(f"{count - 1:064x}", count * 256))
+
+    def test_inventory_allowance_accounts_for_partial_record_budget(self):
+        allowance = 2 * INVENTORY_ENTRY_BYTES + 1
+        worker = InventoryReporter(
+            rank=0, generation="bounded", generation_epoch=1,
+            max_bytes=allowance, max_report_entries=2,
+        )
+        worker.replace({key(str(i)): 256 for i in range(3)})
+        self.assertEqual(len(worker.startup()), 2)
+        worker.add(key("new"), 512)
+        self.assertEqual(len(worker.startup()), 2)
+        self.assertLessEqual(len(worker.held_entry_ids()) * INVENTORY_ENTRY_BYTES,
+                             allowance)
+
     def test_identity_and_batch_bounds_reject_bools_and_long_generations(self) -> None:
         with self.assertRaises(ValueError):
             reporter(
@@ -56,8 +95,6 @@ class QuorumTests(unittest.TestCase):
         )
         for invalid in (True, 0, "1"):
             with self.subTest(invalid=invalid):
-                with self.assertRaises(ValueError):
-                    worker.startup(invalid)  # type: ignore[arg-type]
                 with self.assertRaises(ValueError):
                     worker.next_report(invalid)  # type: ignore[arg-type]
         with self.assertRaises(ValueError):
@@ -378,7 +415,7 @@ class QuorumTests(unittest.TestCase):
         worker = reporter(max_entries=10, max_report_entries=2)
         entries = {key(str(index)): (index + 1) * 256 for index in range(5)}
         worker.replace(entries)
-        worker.startup(5)
+        worker.startup()
         pages = [worker.next_report(2).checkpoint for _ in range(3)]
         self.assertTrue(all(len(page.entries) <= 2 for page in pages))
         self.assertEqual({page.index for page in pages}, {0, 1, 2})
@@ -387,18 +424,18 @@ class QuorumTests(unittest.TestCase):
         worker = reporter(max_entries=4, max_report_entries=2)
         entries = {key(str(index)): (index + 1) * 256 for index in range(4)}
         worker.replace(entries)
-        startup = worker.startup(4)
+        startup = worker.startup()
         first = worker.next_report(2)
         self.assertIsNone(first.delta)
         self.assertEqual(first.checkpoint.sequence, 0)
         self.assertEqual(first.checkpoint.held_count, 4)
         self.assertEqual(first.checkpoint.entries, startup[:2])
 
-    def test_bounded_startup_subset_rolls_forward_without_rank_withdrawal(self) -> None:
+    def test_complete_startup_stays_ready_while_checkpoints_roll_forward(self) -> None:
         worker = reporter(max_entries=4, max_report_entries=2)
         entries = {key(str(index)): (index + 1) * 256 for index in range(4)}
         worker.replace(entries)
-        startup = worker.startup(2)
+        startup = worker.startup()
         scheduler = catalog(
             expected_ranks=(0,), max_entries=4, max_report_entries=2
         )
@@ -413,7 +450,7 @@ class QuorumTests(unittest.TestCase):
         self.assertIsNone(first.delta)
         scheduler.apply_report(first)
         self.assertTrue(scheduler.is_ready)
-        self.assertEqual(scheduler.quorum_count, 2)
+        self.assertEqual(scheduler.quorum_count, 4)
 
         scheduler.apply_report(worker.next_report(2))
         self.assertTrue(scheduler.is_ready)
@@ -424,7 +461,7 @@ class QuorumTests(unittest.TestCase):
         replacement = {key(label): 512 for label in ("d", "e", "f", "g")}
         worker = reporter(max_entries=3, max_report_entries=2)
         worker.replace(initial)
-        startup = worker.startup(3)
+        startup = worker.startup()
         scheduler = catalog(
             expected_ranks=(0,), max_entries=3, max_report_entries=2
         )
@@ -456,6 +493,78 @@ class QuorumTests(unittest.TestCase):
         self.assertEqual(scheduler.quorum_count, 3)
         self.assertFalse(any(scheduler.has_quorum(entry) for entry in initial))
 
+    def test_bulk_additions_keep_existing_quorum_and_publish_bounded_deltas(self):
+        worker = reporter(max_entries=20, max_report_entries=2)
+        old = key("existing")
+        worker.add(old, 32)
+        scheduler = catalog(expected_ranks=(0,), max_entries=20, max_report_entries=2)
+        scheduler.apply_startup(rank=0, generation="boot", generation_epoch=1,
+                                entries=worker.startup())
+        new = {key(str(i)): (i + 2) * 32 for i in range(7)}
+        for entry, span in new.items():
+            worker.add(entry, span)
+        for _ in range(4):
+            report = worker.next_report(2)
+            self.assertLessEqual(len(report.delta.added) + len(report.delta.removed), 2)
+            self.assertLessEqual(len(report.checkpoint.entries), 2)
+            scheduler.apply_report(report)
+            self.assertEqual(scheduler.quorum_count,
+                sum(scheduler.has_quorum(k) for k in (old, *new)))
+            self.assertTrue(scheduler.is_ready)
+            self.assertTrue(scheduler.has_quorum(old, 32))
+        self.assertTrue(all(scheduler.has_quorum(entry, span) for entry, span in new.items()))
+
+    def test_cancelled_mutations_and_recency_touches_do_not_advance_sequence(self):
+        worker = reporter(max_entries=4, max_report_entries=2)
+        first, second, temporary = (key(s) for s in ("first", "second", "temporary"))
+        worker.replace({first: 256, second: 512})
+        worker.startup()
+        worker.add(first, 256)  # A recency touch is not an inventory mutation.
+        worker.remove(temporary)
+        self.assertIsNone(worker.next_report(2).delta)
+        worker.remove(first)
+        worker.add(first, 256)
+        worker.add(temporary, 768)
+        worker.remove(temporary)
+        worker.add(second, 1024)
+        worker.add(second, 512)
+        for _ in range(3):
+            report = worker.next_report(2)
+            self.assertIsNone(report.delta)
+            self.assertEqual(report.checkpoint.sequence, 0)
+        # Cancellation must not suppress a subsequent real span mutation.
+        worker.add(first, 768)
+        removed = worker.next_report(2)
+        self.assertEqual(removed.delta.removed, (first,))
+        self.assertEqual(removed.delta.sequence, 1)
+        added = worker.next_report(2)
+        self.assertEqual(added.delta.added, ((first, 768),))
+        self.assertEqual(added.delta.sequence, 2)
+
+    def test_withdrawals_preempt_pending_additions_and_changed_spans(self):
+        worker = reporter(max_entries=20, max_report_entries=2)
+        old, changed = key("old"), key("changed")
+        worker.replace({old: 32, changed: 64})
+        scheduler = catalog(expected_ranks=(0,), max_entries=20, max_report_entries=2)
+        scheduler.apply_startup(rank=0, generation="boot", generation_epoch=1,
+                                entries=worker.startup())
+        for i in range(8):
+            worker.add(key(str(i)), (i + 3) * 32)
+        scheduler.apply_report(worker.next_report(2))
+        worker.remove(old)
+        worker.add(changed, 96)
+        report = worker.next_report(2)
+        self.assertEqual(set(report.delta.removed), {old, changed})
+        self.assertEqual(report.delta.added, ())
+        scheduler.apply_report(report)
+        self.assertTrue(scheduler.is_ready)
+        self.assertFalse(scheduler.has_quorum(old))
+        self.assertFalse(scheduler.has_quorum(changed))
+        for _ in range(5):
+            scheduler.apply_report(worker.next_report(2))
+            self.assertFalse(scheduler.has_quorum(old))
+        self.assertTrue(scheduler.has_quorum(changed, 96))
+
     def test_new_withdrawal_delta_is_sent_before_retained_history(self) -> None:
         first, second = key("first-held"), key("second-held")
         worker = reporter(max_entries=4, max_report_entries=4)
@@ -469,7 +578,7 @@ class QuorumTests(unittest.TestCase):
             rank=0,
             generation=worker.generation,
             generation_epoch=worker.generation_epoch,
-            entries=worker.startup(4),
+            entries=worker.startup(),
         )
 
         worker.add(second, 512)

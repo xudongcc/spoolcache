@@ -25,7 +25,7 @@ wheel containing the required interfaces before switching production configurati
 | Access mode | `SPOOLCACHE_ACCESS_MODE`, `spoolcache_access_mode`, `access_mode`, `AccessMode` | Removed; configuring the connector enables reads and writes |
 | Request control | `spoolcache_bypass=true` skipped reads and writes | Independent `spoolcache.skip_read` / `spoolcache.skip_write`; set both true to skip persistent reads and writes |
 | Benchmark request option | `--bypass-spoolcache` | `--skip-read` / `--skip-write`; combine both with a fresh salt for cold controls |
-| Payload I/O modes | `required`, `best-effort`, `disabled` | Mandatory `O_DIRECT` |
+| Payload backend | Snapshot objects, slot arenas and `O_DIRECT`/io_uring | Buffered runtime-aligned token files; no backend or I/O-mode selector |
 | I/O configuration | `SPOOLCACHE_DIRECT_IO`, `spoolcache_direct_io`, `DirectIOMode`, store `direct_io` argument | Removed |
 | Host path setting | `SPOOLCACHE_HOST_ROOT` and per-worker variants | `SPOOLCACHE_PATH` |
 | Gemma PP host roots | Separate head/worker cache-root overrides | One `SPOOLCACHE_PATH` |
@@ -33,8 +33,11 @@ wheel containing the required interfaces before switching production configurati
 
 Old JSON keys are rejected, rather than treated as aliases. The environment
 renderer no longer reads the old variables. Update shell automation and Python
-callers together. The `request` and `status` maintenance subcommands, arguments
-and JSON response semantics are unchanged. The new `config` subcommand renders connector JSON.
+callers together. `spoolcache config` renders the default token connector JSON.
+Snapshot `request`/`status` commands and the experimental
+`spoolcache.vllm.token_connector.SpoolCacheTokenConnector` entry point are removed.
+Use `spoolcache.vllm.connector.SpoolCacheConnector`. Older snapshot and slot roots
+are preserved without conversion; rollback uses the old wheel and its own roots.
 
 GB follows the LMCache convention: 1 GB = 1024³ bytes (GiB). Divide an old
 byte limit by `1073741824` when converting it; do not copy the old byte count
@@ -94,7 +97,7 @@ across versions or rename old directories into the new identity.
 
 Rollback uses the retained qualified image and matching model revision. Preserve
 complete rank trees, including generation counters, sentries, fences, tombstones
-and quarantine. Do not restore only SQLite state or only object files.
+and quarantine. Restore complete token files together with their rank ownership and durable control markers.
 
 No automatic migration service or implicit cache deletion is provided.
 [Operations](OPERATIONS.md#preserve-and-retire-data) explains safe archival.

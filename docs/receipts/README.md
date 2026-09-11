@@ -5,6 +5,14 @@ current setup instructions or a compatibility guarantee for later code. Start
 with [Compatibility](../COMPATIBILITY.md) for supported scope and
 [Development](../DEVELOPMENT.md) for how to collect new evidence.
 
+## Token-file evidence
+
+The [final token-file evidence](2026-09-11-token-files/README.md) records source
+review, installed-wheel checks, Gemma and Qwen correctness, the historical
+DeepSeek comparison and remaining limits. It replaces the intermediate
+experiment narratives. Complete originals and raw tools/results remain in the
+[verified local archive](HISTORICAL_RAW.md).
+
 ## Qualification groups
 
 | Evidence | What it establishes |

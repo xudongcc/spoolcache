@@ -8,8 +8,8 @@ it available inside a container.
 
 | Component | Requirement |
 | --- | --- |
-| Python | 3.10 or newer; CI tests 3.10–3.12. |
-| Storage | Writable local storage supporting aligned `O_DIRECT`; NVMe is the intended medium. |
+| Python | 3.11 or newer; CI tests 3.11–3.12. |
+| Storage | Writable local Linux storage supporting buffered I/O, durable file/directory fsync and OFD locks; NVMe is the intended medium. |
 | Serving | Linux, CUDA and a working vLLM installation. |
 | Models | Weights and revisions managed by the operator. |
 | Distributed serving | The same SpoolCache wheel on every required PP/TP participant. |
